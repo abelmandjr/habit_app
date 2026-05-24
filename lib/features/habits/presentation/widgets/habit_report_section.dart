@@ -13,6 +13,7 @@ class HabitReportSection extends StatelessWidget {
     required this.type,
     required this.unit,
     required this.goalValue,
+    required this.habitCreatedAt,
     this.yesNoReport,
     this.quantitativeReport,
     this.onDayTap,
@@ -21,6 +22,7 @@ class HabitReportSection extends StatelessWidget {
   final HabitType type;
   final String unit;
   final int goalValue;
+  final DateTime habitCreatedAt;
   final YesNoHabitReport? yesNoReport;
   final QuantitativeHabitReport? quantitativeReport;
   final void Function(DateTime day)? onDayTap;
@@ -38,13 +40,19 @@ class HabitReportSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         if (type == HabitType.yesNo && yesNoReport != null)
-          _YesNoReportView(report: yesNoReport!, onDayTap: onDayTap)
+          _YesNoReportView(
+            report: yesNoReport!,
+            habitCreatedAt: habitCreatedAt,
+            onDayTap: onDayTap,
+          )
         else if (type == HabitType.quantitative &&
             quantitativeReport != null)
           _QuantitativeReportView(
             report: quantitativeReport!,
             unit: unit,
             goalValue: goalValue,
+            habitCreatedAt: habitCreatedAt,
+            onDayTap: onDayTap,
           ),
       ],
     );
@@ -52,9 +60,14 @@ class HabitReportSection extends StatelessWidget {
 }
 
 class _YesNoReportView extends StatelessWidget {
-  const _YesNoReportView({required this.report, this.onDayTap});
+  const _YesNoReportView({
+    required this.report,
+    required this.habitCreatedAt,
+    this.onDayTap,
+  });
 
   final YesNoHabitReport report;
+  final DateTime habitCreatedAt;
   final void Function(DateTime day)? onDayTap;
 
   @override
@@ -78,8 +91,18 @@ class _YesNoReportView extends StatelessWidget {
         const SizedBox(height: 20),
         StreakCalendar(
           completionDates: report.completionDates,
+          habitCreatedAt: habitCreatedAt,
           onDayTap: onDayTap,
         ),
+        if (onDayTap != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Toque num dia para editar o histórico manualmente.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
       ],
     );
   }
@@ -90,11 +113,15 @@ class _QuantitativeReportView extends StatelessWidget {
     required this.report,
     required this.unit,
     required this.goalValue,
+    required this.habitCreatedAt,
+    this.onDayTap,
   });
 
   final QuantitativeHabitReport report;
   final String unit;
   final int goalValue;
+  final DateTime habitCreatedAt;
+  final void Function(DateTime day)? onDayTap;
 
   @override
   Widget build(BuildContext context) {
@@ -170,6 +197,21 @@ class _QuantitativeReportView extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         StreakCard(streak: report.streak),
+        const SizedBox(height: 20),
+        StreakCalendar(
+          completionDates: report.goalMetDates,
+          habitCreatedAt: habitCreatedAt,
+          onDayTap: onDayTap,
+        ),
+        if (onDayTap != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Toque num dia para registar ou corrigir valores passados.',
+            style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
         const SizedBox(height: 20),
         Text(
           'Evolução (últimos 30 dias)',

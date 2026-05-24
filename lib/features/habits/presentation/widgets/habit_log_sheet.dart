@@ -2,21 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/models/habit_type.dart';
+import '../../../../core/utils/date_utils.dart';
 import '../../data/repositories/habit_repository_impl.dart';
 
-/// Bottom sheet para marcar hábito sim/não ou quantitativo.
+/// Bottom sheet para registar hábito (hoje ou data passada).
 Future<void> showHabitLogSheet({
   required BuildContext context,
   required HabitWithToday item,
   required Future<void> Function(bool? yesNo, double? quantity) onSubmit,
+  DateTime? date,
+  bool? completedOnDate,
+  double? valueOnDate,
 }) {
+  final targetDate = date ?? DateTime.now();
+  final isToday = HabitDateUtils.dateKey(targetDate) == HabitDateUtils.todayKey();
+  final completed = completedOnDate ?? (isToday ? item.completedToday : false);
+  final value = valueOnDate ?? (isToday ? item.todayValue : null);
+
   if (item.type == HabitType.yesNo) {
     return showModalBottomSheet(
       context: context,
       showDragHandle: true,
       builder: (ctx) => _YesNoSheet(
         habitTitle: item.habit.title,
-        completedToday: item.completedToday,
+        date: targetDate,
+        completedOnDate: completed,
         onSelect: (done) async {
           Navigator.pop(ctx);
           await onSubmit(done, null);
@@ -31,12 +41,13 @@ Future<void> showHabitLogSheet({
     showDragHandle: true,
     builder: (ctx) => _QuantitativeSheet(
       habitTitle: item.habit.title,
+      date: targetDate,
       unit: item.habit.unit ?? '',
       goal: item.habit.goalValue,
-      currentValue: item.todayValue,
-      onSubmit: (value) async {
+      currentValue: value,
+      onSubmit: (v) async {
         Navigator.pop(ctx);
-        await onSubmit(null, value);
+        await onSubmit(null, v);
       },
     ),
   );
@@ -45,17 +56,22 @@ Future<void> showHabitLogSheet({
 class _YesNoSheet extends StatelessWidget {
   const _YesNoSheet({
     required this.habitTitle,
-    required this.completedToday,
+    required this.date,
+    required this.completedOnDate,
     required this.onSelect,
   });
 
   final String habitTitle;
-  final bool completedToday;
+  final DateTime date;
+  final bool completedOnDate;
   final Future<void> Function(bool done) onSelect;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final dateLabel = _formatDate(date);
+    final isToday =
+        HabitDateUtils.dateKey(date) == HabitDateUtils.todayKey();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
@@ -68,9 +84,18 @@ class _YesNoSheet extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            isToday ? 'Hoje' : dateLabel,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
-            'Você fez este hábito hoje?',
+            isToday
+                ? 'Você fez este hábito hoje?'
+                : 'Registar histórico para este dia',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -102,22 +127,31 @@ class _YesNoSheet extends StatelessWidget {
               ),
             ],
           ),
-          if (completedToday) ...[
+          if (completedOnDate) ...[
             const SizedBox(height: 12),
             TextButton(
               onPressed: () => onSelect(false),
-              child: const Text('Desmarcar conclusão'),
+              child: const Text('Remover registo deste dia'),
             ),
           ],
         ],
       ),
     );
   }
+
+  String _formatDate(DateTime d) {
+    const months = [
+      'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+      'jul', 'ago', 'set', 'out', 'nov', 'dez',
+    ];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
 }
 
 class _QuantitativeSheet extends StatefulWidget {
   const _QuantitativeSheet({
     required this.habitTitle,
+    required this.date,
     required this.unit,
     required this.goal,
     required this.currentValue,
@@ -125,6 +159,7 @@ class _QuantitativeSheet extends StatefulWidget {
   });
 
   final String habitTitle;
+  final DateTime date;
   final String unit;
   final int goal;
   final double? currentValue;
@@ -162,6 +197,8 @@ class _QuantitativeSheetState extends State<_QuantitativeSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final unit = widget.unit.isNotEmpty ? ' ${widget.unit}' : '';
+    final isToday =
+        HabitDateUtils.dateKey(widget.date) == HabitDateUtils.todayKey();
 
     return Padding(
       padding: EdgeInsets.only(
@@ -182,7 +219,9 @@ class _QuantitativeSheetState extends State<_QuantitativeSheet> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Meta diária: ${widget.goal}$unit',
+            isToday
+                ? 'Registo de hoje · meta ${widget.goal}$unit'
+                : 'Registo histórico · meta ${widget.goal}$unit',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -196,7 +235,7 @@ class _QuantitativeSheetState extends State<_QuantitativeSheet> {
             ],
             autofocus: true,
             decoration: InputDecoration(
-              labelText: 'Valor atingido hoje',
+              labelText: 'Valor atingido',
               suffixText: widget.unit.isNotEmpty ? widget.unit : null,
               border: const OutlineInputBorder(),
             ),
@@ -217,7 +256,7 @@ class _QuantitativeSheetState extends State<_QuantitativeSheet> {
               onPressed: () async {
                 await widget.onSubmit(0);
               },
-              child: const Text('Limpar registro de hoje'),
+              child: const Text('Limpar registo deste dia'),
             ),
         ],
       ),

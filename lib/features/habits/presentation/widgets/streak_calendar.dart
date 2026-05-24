@@ -2,26 +2,31 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/utils/date_utils.dart';
 
-/// Calendário mensal com cápsulas de streak contínuas (estilo da referência).
+/// Heatmap mensal: amarelo = concluído, vermelho = não concluído, azul = hoje.
 class StreakCalendar extends StatefulWidget {
   const StreakCalendar({
     super.key,
     required this.completionDates,
+    required this.habitCreatedAt,
     this.onDayTap,
     this.initialMonth,
   });
 
   final Set<String> completionDates;
+  final DateTime habitCreatedAt;
   final void Function(DateTime day)? onDayTap;
   final DateTime? initialMonth;
+
+  static const completedYellow = Color(0xFFFFD54F);
+  static const missedRed = Color(0xFFEF5350);
+  static const todayBlue = Color(0xFF42A5F5);
 
   @override
   State<StreakCalendar> createState() => _StreakCalendarState();
 }
 
 class _StreakCalendarState extends State<StreakCalendar> {
-  static const _weekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-
+  static const _weekdays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
   static const _monthsPt = [
     'Janeiro',
     'Fevereiro',
@@ -38,7 +43,6 @@ class _StreakCalendarState extends State<StreakCalendar> {
   ];
 
   late DateTime _displayedMonth;
-  DateTime? _selectedDay;
 
   @override
   void initState() {
@@ -48,43 +52,33 @@ class _StreakCalendarState extends State<StreakCalendar> {
       (widget.initialMonth ?? now).year,
       (widget.initialMonth ?? now).month,
     );
-    _selectedDay = DateTime(now.year, now.month, now.day);
-  }
-
-  @override
-  void didUpdateWidget(StreakCalendar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.completionDates != widget.completionDates) {
-      setState(() {});
-    }
-  }
-
-  void _previousMonth() {
-    setState(() {
-      _displayedMonth = DateTime(_displayedMonth.year, _displayedMonth.month - 1);
-    });
-  }
-
-  void _nextMonth() {
-    setState(() {
-      _displayedMonth = DateTime(_displayedMonth.year, _displayedMonth.month + 1);
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final today = HabitDateUtils.startOfDay(DateTime.now());
+    final created = HabitDateUtils.startOfDay(widget.habitCreatedAt);
     final weeks = _buildWeeks(_displayedMonth);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Streak Calendar',
+          'Calendário de progresso',
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 12,
+          runSpacing: 4,
+          children: [
+            _LegendDot(color: StreakCalendar.completedYellow, label: 'Feito'),
+            _LegendDot(color: StreakCalendar.missedRed, label: 'Não feito'),
+            _LegendDot(color: StreakCalendar.todayBlue, label: 'Hoje'),
+          ],
         ),
         const SizedBox(height: 12),
         Container(
@@ -101,7 +95,12 @@ class _StreakCalendarState extends State<StreakCalendar> {
               Row(
                 children: [
                   IconButton(
-                    onPressed: _previousMonth,
+                    onPressed: () => setState(() {
+                      _displayedMonth = DateTime(
+                        _displayedMonth.year,
+                        _displayedMonth.month - 1,
+                      );
+                    }),
                     icon: const Icon(Icons.chevron_left_rounded),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -115,7 +114,12 @@ class _StreakCalendarState extends State<StreakCalendar> {
                     ),
                   ),
                   IconButton(
-                    onPressed: _nextMonth,
+                    onPressed: () => setState(() {
+                      _displayedMonth = DateTime(
+                        _displayedMonth.year,
+                        _displayedMonth.month + 1,
+                      );
+                    }),
                     icon: const Icon(Icons.chevron_right_rounded),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -130,8 +134,7 @@ class _StreakCalendarState extends State<StreakCalendar> {
                           child: Text(
                             d,
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -140,16 +143,27 @@ class _StreakCalendarState extends State<StreakCalendar> {
                     .toList(),
               ),
               const SizedBox(height: 8),
-              ...weeks.map((week) => _WeekRow(
-                    week: week,
-                    completionDates: widget.completionDates,
-                    today: today,
-                    selectedDay: _selectedDay,
-                    onDayTap: (day) {
-                      setState(() => _selectedDay = day);
-                      widget.onDayTap?.call(day);
-                    },
-                  )),
+              ...weeks.map(
+                (week) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: week.map((day) {
+                      if (day == null) {
+                        return const Expanded(child: SizedBox(height: 36));
+                      }
+                      return Expanded(
+                        child: _HeatmapDay(
+                          day: day,
+                          today: today,
+                          created: created,
+                          completionDates: widget.completionDates,
+                          onTap: widget.onDayTap,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -160,7 +174,7 @@ class _StreakCalendarState extends State<StreakCalendar> {
   List<List<DateTime?>> _buildWeeks(DateTime month) {
     final first = DateTime(month.year, month.month, 1);
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
-    final startWeekday = first.weekday % 7; // Sun=0
+    final startWeekday = first.weekday % 7;
 
     final cells = <DateTime?>[];
     for (var i = 0; i < startWeekday; i++) {
@@ -180,331 +194,75 @@ class _StreakCalendarState extends State<StreakCalendar> {
   }
 }
 
-class _WeekRow extends StatelessWidget {
-  const _WeekRow({
-    required this.week,
-    required this.completionDates,
-    required this.today,
-    required this.selectedDay,
-    required this.onDayTap,
-  });
-
-  final List<DateTime?> week;
-  final Set<String> completionDates;
-  final DateTime today;
-  final DateTime? selectedDay;
-  final void Function(DateTime day) onDayTap;
-
-  static const _streakOrange = Color(0xFFFF8C42);
-
-  @override
-  Widget build(BuildContext context) {
-    final segments = _streakSegments(week);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final cellWidth = constraints.maxWidth / 7;
-          const cellHeight = 40.0;
-
-          return SizedBox(
-            height: cellHeight,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                for (final seg in segments)
-                  Positioned(
-                    left: seg.start * cellWidth + 2,
-                    width: (seg.end - seg.start + 1) * cellWidth - 4,
-                    top: 6,
-                    height: 28,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: _streakOrange,
-                        borderRadius: BorderRadius.horizontal(
-                          left: Radius.circular(seg.roundLeft ? 14 : 0),
-                          right: Radius.circular(seg.roundRight ? 14 : 0),
-                        ),
-                      ),
-                    ),
-                  ),
-                Row(
-                  children: List.generate(7, (i) {
-                    final day = week[i];
-                    if (day == null) {
-                      return SizedBox(width: cellWidth, height: cellHeight);
-                    }
-                    return SizedBox(
-                      width: cellWidth,
-                      height: cellHeight,
-                      child: _DayCell(
-                        day: day,
-                        today: today,
-                        selectedDay: selectedDay,
-                        completionDates: completionDates,
-                        inStreakSegment: segments.any(
-                          (s) => i >= s.start && i <= s.end,
-                        ),
-                        streakDayIndex: _streakIndex(day, completionDates),
-                        onTap: () => onDayTap(day),
-                      ),
-                    );
-                  }),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  List<_StreakSegment> _streakSegments(List<DateTime?> week) {
-    final segments = <_StreakSegment>[];
-    var start = -1;
-
-    for (var i = 0; i < 7; i++) {
-      final day = week[i];
-      final completed = day != null &&
-          completionDates.contains(HabitDateUtils.dateKey(day));
-
-      if (completed && start == -1) {
-        start = i;
-      } else if (!completed && start != -1) {
-        segments.add(_StreakSegment(
-          start: start,
-          end: i - 1,
-          roundLeft: true,
-          roundRight: true,
-        ));
-        start = -1;
-      }
-    }
-    if (start != -1) {
-      var endIdx = start;
-      for (var j = start; j < 7; j++) {
-        final d = week[j];
-        if (d != null &&
-            completionDates.contains(HabitDateUtils.dateKey(d))) {
-          endIdx = j;
-        } else if (d != null) {
-          break;
-        }
-      }
-      segments.add(_StreakSegment(
-        start: start,
-        end: endIdx,
-        roundLeft: true,
-        roundRight: true,
-      ));
-    }
-    return segments;
-  }
-
-  int _streakIndex(DateTime day, Set<String> dates) {
-    if (!dates.contains(HabitDateUtils.dateKey(day))) return 0;
-    var count = 1;
-    var cursor = day.subtract(const Duration(days: 1));
-    while (dates.contains(HabitDateUtils.dateKey(cursor))) {
-      count++;
-      cursor = cursor.subtract(const Duration(days: 1));
-    }
-    return count;
-  }
-}
-
-class _StreakSegment {
-  const _StreakSegment({
-    required this.start,
-    required this.end,
-    required this.roundLeft,
-    required this.roundRight,
-  });
-
-  final int start;
-  final int end;
-  final bool roundLeft;
-  final bool roundRight;
-}
-
-class _DayCell extends StatelessWidget {
-  const _DayCell({
+class _HeatmapDay extends StatelessWidget {
+  const _HeatmapDay({
     required this.day,
     required this.today,
-    required this.selectedDay,
+    required this.created,
     required this.completionDates,
-    required this.inStreakSegment,
-    required this.streakDayIndex,
-    required this.onTap,
+    this.onTap,
   });
 
   final DateTime day;
   final DateTime today;
-  final DateTime? selectedDay;
+  final DateTime created;
   final Set<String> completionDates;
-  final bool inStreakSegment;
-  final int streakDayIndex;
-  final VoidCallback onTap;
-
-  static const _streakOrange = Color(0xFFFF8C42);
-  static const _streakPale = Color(0xFFFFE8D6);
+  final void Function(DateTime day)? onTap;
 
   @override
   Widget build(BuildContext context) {
     final key = HabitDateUtils.dateKey(day);
-    final completed = completionDates.contains(key);
     final isToday = _sameDay(day, today);
     final isFuture = day.isAfter(today);
-    final isSelected =
-        selectedDay != null && _sameDay(day, selectedDay!) && !isToday;
+    final isBeforeCreation = day.isBefore(created);
+    final completed = completionDates.contains(key);
 
-    final isStreakEnd = completed &&
-        !inStreakSegment &&
-        !isToday &&
-        _isDayAfterMissedStreak(day, completionDates);
+    Color? fill;
+    Color textColor = Colors.black87;
+    Border? border;
 
-    if (isToday) {
-      return GestureDetector(
-        onTap: onTap,
-        child: Center(
-          child: _TodayBubble(
-            day: day.day,
-            completed: completed,
-          ),
-        ),
-      );
+    if (isBeforeCreation) {
+      fill = Colors.transparent;
+      textColor = Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.35);
+    } else if (isFuture) {
+      fill = Theme.of(context).colorScheme.surfaceContainerHighest;
+      textColor = Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5);
+    } else if (isToday) {
+      border = Border.all(color: StreakCalendar.todayBlue, width: 2.5);
+      fill = completed ? StreakCalendar.completedYellow : StreakCalendar.missedRed;
+      textColor = completed ? Colors.black87 : Colors.white;
+    } else if (completed) {
+      fill = StreakCalendar.completedYellow;
+    } else {
+      fill = StreakCalendar.missedRed;
+      textColor = Colors.white;
     }
 
-    if (isSelected) {
-      return GestureDetector(
-        onTap: onTap,
-        child: Center(
+    final canTap = onTap != null && !isFuture && !isBeforeCreation;
+
+    return Padding(
+      padding: const EdgeInsets.all(2),
+      child: Material(
+        color: fill,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: canTap ? () => onTap!(day) : null,
+          borderRadius: BorderRadius.circular(8),
           child: Container(
-            width: 32,
             height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant,
-                width: 1.5,
-              ),
-            ),
             alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: border,
+            ),
             child: Text(
               '${day.day}',
               style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+                fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
+                color: textColor,
               ),
             ),
-          ),
-        ),
-      );
-    }
-
-    if (inStreakSegment && completed) {
-      final showMilestone = streakDayIndex > 0 && streakDayIndex % 7 == 0;
-      return GestureDetector(
-        onTap: onTap,
-        child: Center(
-          child: Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              Text(
-                '${day.day}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-              if (showMilestone)
-                Positioned(
-                  top: 0,
-                  child: Transform.rotate(
-                    angle: 0.785398,
-                    child: Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(1),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (isStreakEnd) {
-      return GestureDetector(
-        onTap: onTap,
-        child: Center(
-          child: Container(
-            width: 32,
-            height: 28,
-            decoration: BoxDecoration(
-              color: _streakPale,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '${day.day}',
-              style: const TextStyle(
-                color: _streakOrange,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (completed && !isFuture) {
-      return GestureDetector(
-        onTap: onTap,
-        child: Center(
-          child: Container(
-            width: 32,
-            height: 28,
-            decoration: BoxDecoration(
-              color: _streakOrange.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '${day.day}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return GestureDetector(
-      onTap: isFuture ? null : onTap,
-      child: Center(
-        child: Text(
-          '${day.day}',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: isFuture
-                ? Theme.of(context)
-                    .colorScheme
-                    .onSurfaceVariant
-                    .withValues(alpha: 0.45)
-                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ),
@@ -513,83 +271,30 @@ class _DayCell extends StatelessWidget {
 
   bool _sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
-
-  bool _isDayAfterMissedStreak(DateTime day, Set<String> dates) {
-    final prev = day.subtract(const Duration(days: 1));
-    final prev2 = day.subtract(const Duration(days: 2));
-    return dates.contains(HabitDateUtils.dateKey(day)) &&
-        dates.contains(HabitDateUtils.dateKey(prev2)) &&
-        !dates.contains(HabitDateUtils.dateKey(prev));
-  }
 }
 
-class _TodayBubble extends StatelessWidget {
-  const _TodayBubble({required this.day, required this.completed});
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
 
-  final int day;
-  final bool completed;
-
-  static const _todayBlue = Color(0xFF4A9EFF);
+  final Color color;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 34,
-          height: 34,
+          width: 12,
+          height: 12,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const RadialGradient(
-              colors: [Color(0xFF7BB8FF), _todayBlue],
-              center: Alignment(-0.3, -0.4),
-              radius: 0.9,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: _todayBlue.withValues(alpha: 0.45),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '$day',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
+            color: color,
+            borderRadius: BorderRadius.circular(3),
           ),
         ),
-        CustomPaint(
-          size: const Size(10, 6),
-          painter: _BubblePointerPainter(
-            color: completed ? _todayBlue : _todayBlue,
-          ),
-        ),
+        const SizedBox(width: 4),
+        Text(label, style: Theme.of(context).textTheme.labelSmall),
       ],
     );
   }
-}
-
-class _BubblePointerPainter extends CustomPainter {
-  _BubblePointerPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width / 2, size.height)
-      ..close();
-    canvas.drawPath(path, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

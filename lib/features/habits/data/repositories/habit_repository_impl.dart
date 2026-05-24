@@ -11,13 +11,22 @@ class HabitWithToday {
     required this.habit,
     required this.completedToday,
     this.todayValue,
+    this.currentStreak = 0,
   });
 
   final HabitData habit;
   final bool completedToday;
   final double? todayValue;
+  final int currentStreak;
 
   HabitType get type => HabitType.fromKey(habit.habitType);
+
+  double get progressRatio {
+    if (type == HabitType.quantitative && habit.goalValue > 0) {
+      return ((todayValue ?? 0) / habit.goalValue).clamp(0.0, 1.0);
+    }
+    return completedToday ? 1.0 : 0.0;
+  }
 }
 
 class HabitRepositoryImpl {
@@ -33,11 +42,13 @@ class HabitRepositoryImpl {
     for (final habit in habits) {
       final completed = await db.isCompletedOn(habit.id, today);
       final value = await db.getLoggedValue(habit.id, today);
+      final streak = await db.getStreakStats(habit.id);
       results.add(
         HabitWithToday(
           habit: habit,
           completedToday: completed,
           todayValue: value,
+          currentStreak: streak.currentStreak,
         ),
       );
     }
@@ -82,26 +93,36 @@ class HabitRepositoryImpl {
 
   Future<void> updateHabit(HabitData habit) => db.updateHabit(habit);
 
-  Future<void> setYesNoToday(String habitId, bool completed) {
-    return db.setYesNoCompletion(
-      habitId,
-      HabitDateUtils.todayKey(),
-      completed,
-    );
-  }
+  Future<void> setYesNoToday(String habitId, bool completed) =>
+      setYesNoForDate(habitId, HabitDateUtils.todayKey(), completed);
 
-  Future<void> setQuantitativeToday(String habitId, double value) {
-    return db.setQuantitativeCompletion(
-      habitId,
-      HabitDateUtils.todayKey(),
-      value,
-    );
-  }
+  Future<void> setQuantitativeToday(String habitId, double value) =>
+      setQuantitativeForDate(habitId, HabitDateUtils.todayKey(), value);
+
+  Future<void> setYesNoForDate(
+    String habitId,
+    String date,
+    bool completed,
+  ) =>
+      db.setYesNoCompletion(habitId, date, completed);
+
+  Future<void> setQuantitativeForDate(
+    String habitId,
+    String date,
+    double value,
+  ) =>
+      db.setQuantitativeCompletion(habitId, date, value);
+
+  Future<bool> isCompletedOnDate(String habitId, DateTime date) =>
+      db.isCompletedOn(habitId, HabitDateUtils.dateKey(date));
+
+  Future<double?> getValueForDate(String habitId, DateTime date) =>
+      db.getLoggedValue(habitId, HabitDateUtils.dateKey(date));
 
   Future<void> toggleToday(String habitId) => db.toggleToday(habitId);
 
   Future<void> setCompletion(String habitId, String date, bool completed) =>
-      db.setYesNoCompletion(habitId, date, completed);
+      setYesNoForDate(habitId, date, completed);
 
   Future<void> deleteHabit(String id) => db.deleteHabit(id);
 
@@ -140,6 +161,7 @@ class HabitRepositoryImpl {
         goalMetToday: false,
         history: [],
         streak: StreakCalculator.compute({}),
+        goalMetDates: {},
       );
     }
     final completions = await db.getCompletionsForHabit(habitId);

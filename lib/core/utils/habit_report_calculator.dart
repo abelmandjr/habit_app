@@ -49,6 +49,7 @@ class QuantitativeHabitReport {
     required this.goalMetToday,
     required this.history,
     required this.streak,
+    required this.goalMetDates,
   });
 
   final double todayValue;
@@ -60,6 +61,7 @@ class QuantitativeHabitReport {
   final bool goalMetToday;
   final List<QuantitativeDayValue> history;
   final StreakStats streak;
+  final Set<String> goalMetDates;
 }
 
 class HabitReportCalculator {
@@ -157,6 +159,7 @@ class HabitReportCalculator {
       goalMetToday: goalMetDates.contains(todayKey),
       history: history,
       streak: StreakCalculator.compute(goalMetDates),
+      goalMetDates: goalMetDates,
     );
   }
 

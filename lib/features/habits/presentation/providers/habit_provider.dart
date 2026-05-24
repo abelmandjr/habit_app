@@ -7,6 +7,7 @@ import '../../../../core/models/habit_type.dart';
 import '../../../../core/notifications/notification_service.dart';
 import '../../../../core/providers/database_provider.dart';
 import '../../../../core/storage/user_settings_service.dart';
+import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/habit_report_calculator.dart';
 import '../../../../core/utils/streak_calculator.dart';
 import '../../data/repositories/habit_repository_impl.dart';
@@ -57,15 +58,71 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
     }
   }
 
-  Future<void> logHabit(HabitWithToday item, {bool? yesNo, double? quantity}) async {
-    if (item.type == HabitType.yesNo && yesNo != null) {
-      await _repo.setYesNoToday(item.habit.id, yesNo);
-    } else if (item.type == HabitType.quantitative && quantity != null) {
-      await _repo.setQuantitativeToday(item.habit.id, quantity);
+  Future<void> logHabit(
+    HabitWithToday item, {
+    bool? yesNo,
+    double? quantity,
+    DateTime? date,
+  }) async {
+    final dateKey =
+        date != null ? HabitDateUtils.dateKey(date) : HabitDateUtils.todayKey();
+    final isToday = dateKey == HabitDateUtils.todayKey();
+
+    if (isToday) {
+      _applyOptimisticToday(item.habit.id, yesNo: yesNo, quantity: quantity);
     }
-    await _ref.read(habitDetailNotifierProvider(item.habit.id).notifier).refresh();
-    _ref.invalidate(globalStreakProvider);
-    await load(silent: true);
+
+    try {
+      if (item.type == HabitType.yesNo && yesNo != null) {
+        await _repo.setYesNoForDate(item.habit.id, dateKey, yesNo);
+      } else if (item.type == HabitType.quantitative && quantity != null) {
+        await _repo.setQuantitativeForDate(item.habit.id, dateKey, quantity);
+      }
+
+      _ref.invalidate(globalStreakProvider);
+      await _ref
+          .read(habitDetailNotifierProvider(item.habit.id).notifier)
+          .refresh();
+      if (isToday) {
+        await load(silent: true);
+      }
+    } catch (e) {
+      if (isToday) await load(silent: true);
+      rethrow;
+    }
+  }
+
+  void _applyOptimisticToday(
+    String habitId, {
+    bool? yesNo,
+    double? quantity,
+  }) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    state = AsyncData(
+      current.map((h) {
+        if (h.habit.id != habitId) return h;
+        if (yesNo != null) {
+          return HabitWithToday(
+            habit: h.habit,
+            completedToday: yesNo,
+            todayValue: h.todayValue,
+            currentStreak: h.currentStreak,
+          );
+        }
+        if (quantity != null) {
+          final met = quantity >= h.habit.goalValue;
+          return HabitWithToday(
+            habit: h.habit,
+            completedToday: met,
+            todayValue: quantity > 0 ? quantity : null,
+            currentStreak: h.currentStreak,
+          );
+        }
+        return h;
+      }).toList(),
+    );
   }
 
   Future<void> deleteHabit(String id) async {
@@ -131,30 +188,55 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
   }
 
   Future<void> toggleToday() async {
-    final habit = state.valueOrNull?.habit;
-    if (habit == null) return;
+    final current = state.valueOrNull;
+    if (current == null) return;
+    if (HabitType.fromKey(current.habit.habitType) != HabitType.yesNo) return;
 
-    if (HabitType.fromKey(habit.habitType) == HabitType.yesNo) {
-      await _repo.toggleToday(_habitId);
-    }
-    _ref.invalidate(globalStreakProvider);
-    await refresh();
-    await _ref.read(habitListProvider.notifier).load(silent: true);
+    await _ref.read(habitListProvider.notifier).logHabit(
+          HabitWithToday(
+            habit: current.habit,
+            completedToday: current.completedToday,
+            todayValue: current.todayValue,
+          ),
+          yesNo: !current.completedToday,
+        );
   }
 
-  Future<void> toggleDate(DateTime day) async {
-    final key = _dateKey(day);
-    final dates = state.valueOrNull?.yesNoReport?.completionDates ?? {};
-    final done = dates.contains(key);
-    await _repo.setCompletion(_habitId, key, !done);
+  Future<void> logForDate(
+    DateTime day, {
+    bool? yesNo,
+    double? quantity,
+  }) async {
+    final key = HabitDateUtils.dateKey(day);
+    final isToday = key == HabitDateUtils.todayKey();
+    final current = state.valueOrNull;
+
+    if (current != null && isToday) {
+      if (yesNo != null) {
+        state = AsyncData(current.copyWith(completedToday: yesNo));
+      } else if (quantity != null) {
+        state = AsyncData(
+          current.copyWith(
+            todayValue: quantity > 0 ? quantity : null,
+            completedToday: quantity >= current.habit.goalValue,
+          ),
+        );
+      }
+    }
+
+    if (yesNo != null) {
+      await _repo.setYesNoForDate(_habitId, key, yesNo);
+    } else if (quantity != null) {
+      await _repo.setQuantitativeForDate(_habitId, key, quantity);
+    }
+
     _ref.invalidate(globalStreakProvider);
+    if (isToday) {
+      await _ref.read(habitListProvider.notifier).load(silent: true);
+    }
     await refresh();
-    await _ref.read(habitListProvider.notifier).load(silent: true);
   }
 }
-
-String _dateKey(DateTime d) =>
-    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
 class HabitDetailState {
   const HabitDetailState({
@@ -170,6 +252,21 @@ class HabitDetailState {
   final double? todayValue;
   final YesNoHabitReport? yesNoReport;
   final QuantitativeHabitReport? quantitativeReport;
+
+  HabitDetailState copyWith({
+    bool? completedToday,
+    double? todayValue,
+    YesNoHabitReport? yesNoReport,
+    QuantitativeHabitReport? quantitativeReport,
+  }) {
+    return HabitDetailState(
+      habit: habit,
+      completedToday: completedToday ?? this.completedToday,
+      todayValue: todayValue ?? this.todayValue,
+      yesNoReport: yesNoReport ?? this.yesNoReport,
+      quantitativeReport: quantitativeReport ?? this.quantitativeReport,
+    );
+  }
 
   StreakStats get streak =>
       yesNoReport?.streak ??

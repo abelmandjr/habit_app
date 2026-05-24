@@ -74,11 +74,30 @@ class HabitDetailPage extends ConsumerWidget {
           final unit = habit.unit ?? '';
           final notifier =
               ref.read(habitDetailNotifierProvider(habitId).notifier);
+          final repo = ref.read(habitRepositoryProvider);
           final listItem = HabitWithToday(
             habit: habit,
             completedToday: detail.completedToday,
             todayValue: detail.todayValue,
           );
+
+          Future<void> openLogForDay(DateTime day) async {
+            final completed = await repo.isCompletedOnDate(habitId, day);
+            final value = await repo.getValueForDate(habitId, day);
+            if (!context.mounted) return;
+            await showHabitLogSheet(
+              context: context,
+              item: listItem,
+              date: day,
+              completedOnDate: completed,
+              valueOnDate: value,
+              onSubmit: (yesNo, quantity) => notifier.logForDate(
+                day,
+                yesNo: yesNo,
+                quantity: quantity,
+              ),
+            );
+          }
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -119,19 +138,7 @@ class HabitDetailPage extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               FilledButton.tonalIcon(
-                onPressed: () {
-                  if (type == HabitType.quantitative) {
-                    showHabitLogSheet(
-                      context: context,
-                      item: listItem,
-                      onSubmit: (yesNo, quantity) => ref
-                          .read(habitListProvider.notifier)
-                          .logHabit(listItem, yesNo: yesNo, quantity: quantity),
-                    );
-                  } else {
-                    notifier.toggleToday();
-                  }
-                },
+                onPressed: () => openLogForDay(DateTime.now()),
                 icon: Icon(
                   detail.completedToday
                       ? Icons.check_circle_rounded
@@ -155,11 +162,10 @@ class HabitDetailPage extends ConsumerWidget {
                 type: type,
                 unit: unit,
                 goalValue: habit.goalValue,
+                habitCreatedAt: habit.createdAt,
                 yesNoReport: detail.yesNoReport,
                 quantitativeReport: detail.quantitativeReport,
-                onDayTap: type == HabitType.yesNo
-                    ? (day) => notifier.toggleDate(day)
-                    : null,
+                onDayTap: openLogForDay,
               ),
             ],
           );

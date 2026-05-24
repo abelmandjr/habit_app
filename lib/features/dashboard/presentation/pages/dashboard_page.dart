@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/models/habit_type.dart';
 import '../../../../core/utils/habit_report_calculator.dart';
+import '../../../habits/presentation/providers/habit_list_preferences.dart';
 import '../../../habits/presentation/providers/habit_provider.dart';
+import '../../../habits/presentation/utils/habit_list_utils.dart';
+import '../../../habits/presentation/widgets/habit_list_controls.dart';
 import '../../../habits/presentation/widgets/habit_log_sheet.dart';
 import '../../../habits/presentation/widgets/habit_today_tile.dart';
 import '../../../habits/presentation/widgets/global_streak_banner.dart';
@@ -16,6 +20,7 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final habitsState = ref.watch(habitListProvider);
+    final listPrefs = ref.watch(habitListPreferencesProvider);
     final userName = ref.watch(userNameProvider);
     final globalStreak = ref.watch(globalStreakProvider);
 
@@ -28,6 +33,8 @@ class DashboardPage extends ConsumerWidget {
       body: habitsState.when(
         data: (items) {
           final completed = items.where((h) => h.completedToday).length;
+          final visibleItems =
+              applyHabitListPreferences(items, listPrefs);
 
           return RefreshIndicator(
             onRefresh: () => ref.read(habitListProvider.notifier).load(),
@@ -90,7 +97,9 @@ class DashboardPage extends ConsumerWidget {
                           completed: completed,
                           total: items.length,
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
+                        const HabitListControls(),
+                        const SizedBox(height: 16),
                         Text(
                           'Hoje',
                           style:
@@ -100,7 +109,7 @@ class DashboardPage extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Toque no hábito para registrar. Deslize para excluir.',
+                          'Sim/não: toque para marcar. Quantitativo: toque para registar. Deslize para excluir.',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -108,21 +117,32 @@ class DashboardPage extends ConsumerWidget {
                               ),
                         ),
                         const SizedBox(height: 12),
-                        ...items.map((item) => _DismissibleHabitCard(
-                              item: item,
-                              onDetails: () =>
-                                  context.push('/habits/${item.habit.id}'),
-                              onLog: () => showHabitLogSheet(
-                                context: context,
+                        if (visibleItems.isEmpty && items.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Text(
+                              'Todos os hábitos de hoje já foram concluídos.',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                          )
+                        else
+                          ...visibleItems.map((item) => _DismissibleHabitCard(
                                 item: item,
-                                onSubmit: (yesNo, quantity) => ref
+                                ref: ref,
+                                onDetails: () =>
+                                    context.push('/habits/${item.habit.id}'),
+                                onDelete: () => ref
                                     .read(habitListProvider.notifier)
-                                    .logHabit(item, yesNo: yesNo, quantity: quantity),
-                              ),
-                              onDelete: () => ref
-                                  .read(habitListProvider.notifier)
-                                  .deleteHabit(item.habit.id),
-                            )),
+                                    .deleteHabit(item.habit.id),
+                              )),
                       ],
                     ]),
                   ),
@@ -257,14 +277,14 @@ class _EmptyState extends StatelessWidget {
 class _DismissibleHabitCard extends StatelessWidget {
   const _DismissibleHabitCard({
     required this.item,
+    required this.ref,
     required this.onDetails,
-    required this.onLog,
     required this.onDelete,
   });
 
   final HabitWithToday item;
+  final WidgetRef ref;
   final VoidCallback onDetails;
-  final VoidCallback onLog;
   final VoidCallback onDelete;
 
   @override
@@ -309,7 +329,19 @@ class _DismissibleHabitCard extends StatelessWidget {
         child: HabitTodayTile(
           item: item,
           onTap: onDetails,
-          onQuickLog: onLog,
+          onToggle: item.type == HabitType.yesNo
+              ? () => ref.read(habitListProvider.notifier).logHabit(
+                    item,
+                    yesNo: !item.completedToday,
+                  )
+              : null,
+          onQuickLog: () => showHabitLogSheet(
+            context: context,
+            item: item,
+            onSubmit: (yesNo, quantity) => ref
+                .read(habitListProvider.notifier)
+                .logHabit(item, yesNo: yesNo, quantity: quantity),
+          ),
         ),
       ),
     );
