@@ -3,6 +3,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 
 import '../models/habit_type.dart';
 import '../utils/date_utils.dart';
+import '../utils/habit_report_calculator.dart';
 import '../utils/streak_calculator.dart';
 
 part 'app_database.g.dart';
@@ -140,10 +141,50 @@ class AppDatabase extends _$AppDatabase {
     await (delete(habits)..where((t) => t.id.equals(id))).go();
   }
 
-  Future<HabitCompletion?> _completionRow(String habitId, String date) =>
-      (select(habitCompletions)
-            ..where((t) => t.habitId.equals(habitId) & t.date.equals(date)))
-          .getSingleOrNull();
+  Future<List<HabitCompletion>> getCompletionsForHabit(String habitId) =>
+      (select(habitCompletions)..where((t) => t.habitId.equals(habitId))).get();
+
+  Future<List<HabitCompletion>> getAllCompletions() =>
+      select(habitCompletions).get();
+
+  Future<HabitCompletion?> _completionRow(String habitId, String date) async {
+    final rows = await (select(habitCompletions)
+          ..where((t) => t.habitId.equals(habitId) & t.date.equals(date)))
+        .get();
+
+    if (rows.isEmpty) return null;
+    if (rows.length == 1) return rows.first;
+
+    rows.sort((a, b) => b.id.compareTo(a.id));
+    final keep = rows.first;
+    for (var i = 1; i < rows.length; i++) {
+      await (delete(habitCompletions)..where((t) => t.id.equals(rows[i].id))).go();
+    }
+    return keep;
+  }
+
+  Future<void> _upsertCompletion({
+    required String habitId,
+    required String date,
+    required Value<double?> loggedValue,
+  }) async {
+    final existing = await _completionRow(habitId, date);
+    if (existing != null) {
+      await (update(habitCompletions)
+            ..where(
+              (t) => t.habitId.equals(habitId) & t.date.equals(date),
+            ))
+          .write(HabitCompletionsCompanion(loggedValue: loggedValue));
+    } else {
+      await into(habitCompletions).insert(
+        HabitCompletionsCompanion.insert(
+          habitId: habitId,
+          date: date,
+          loggedValue: loggedValue,
+        ),
+      );
+    }
+  }
 
   Future<bool> isGoalMet(HabitData habit, HabitCompletion? row) async {
     if (row == null) return false;
@@ -170,12 +211,10 @@ class AppDatabase extends _$AppDatabase {
     bool completed,
   ) async {
     if (completed) {
-      await into(habitCompletions).insertOnConflictUpdate(
-        HabitCompletionsCompanion.insert(
-          habitId: habitId,
-          date: date,
-          loggedValue: const Value(1),
-        ),
+      await _upsertCompletion(
+        habitId: habitId,
+        date: date,
+        loggedValue: const Value(1),
       );
     } else {
       await (delete(habitCompletions)
@@ -196,12 +235,10 @@ class AppDatabase extends _$AppDatabase {
       return;
     }
 
-    await into(habitCompletions).insertOnConflictUpdate(
-      HabitCompletionsCompanion.insert(
-        habitId: habitId,
-        date: date,
-        loggedValue: Value(value),
-      ),
+    await _upsertCompletion(
+      habitId: habitId,
+      date: date,
+      loggedValue: Value(value),
     );
   }
 
@@ -231,5 +268,14 @@ class AppDatabase extends _$AppDatabase {
   Future<StreakStats> getStreakStats(String habitId) async {
     final dates = await getCompletionDates(habitId);
     return StreakCalculator.compute(dates);
+  }
+
+  Future<GlobalStreakStats> getGlobalStreakStats() async {
+    final allHabits = await getAllHabits();
+    final allCompletions = await getAllCompletions();
+    return HabitReportCalculator.computeGlobalStreak(
+      habits: allHabits,
+      allCompletions: allCompletions,
+    );
   }
 }

@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/models/habit_type.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/utils/habit_report_calculator.dart';
 import '../../../../core/utils/streak_calculator.dart';
 
 class HabitWithToday {
@@ -103,4 +104,50 @@ class HabitRepositoryImpl {
       db.setYesNoCompletion(habitId, date, completed);
 
   Future<void> deleteHabit(String id) => db.deleteHabit(id);
+
+  Future<GlobalStreakStats> getGlobalStreakStats() =>
+      db.getGlobalStreakStats();
+
+  Future<YesNoHabitReport> getYesNoReport(String habitId) async {
+    final habit = await db.getHabitById(habitId);
+    if (habit == null) {
+      return YesNoHabitReport(
+        daysDone: 0,
+        daysFailed: 0,
+        successRate: 0,
+        streak: StreakCalculator.compute({}),
+        completionDates: {},
+        trackedDays: 0,
+      );
+    }
+    final dates = await db.getCompletionDates(habitId);
+    return HabitReportCalculator.buildYesNoReport(
+      habit: habit,
+      completionDates: dates,
+    );
+  }
+
+  Future<QuantitativeHabitReport> getQuantitativeReport(String habitId) async {
+    final habit = await db.getHabitById(habitId);
+    if (habit == null) {
+      return QuantitativeHabitReport(
+        todayValue: 0,
+        dailyAverage: 0,
+        totalAccumulated: 0,
+        bestDayValue: 0,
+        bestDayDate: null,
+        goalProgress: 0,
+        goalMetToday: false,
+        history: [],
+        streak: StreakCalculator.compute({}),
+      );
+    }
+    final completions = await db.getCompletionsForHabit(habitId);
+    final goalMetDates = await db.getCompletionDates(habitId);
+    return HabitReportCalculator.buildQuantitativeReport(
+      habit: habit,
+      completions: completions,
+      goalMetDates: goalMetDates,
+    );
+  }
 }

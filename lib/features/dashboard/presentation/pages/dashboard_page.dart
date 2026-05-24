@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/utils/habit_report_calculator.dart';
 import '../../../habits/presentation/providers/habit_provider.dart';
 import '../../../habits/presentation/widgets/habit_log_sheet.dart';
 import '../../../habits/presentation/widgets/habit_today_tile.dart';
+import '../../../habits/presentation/widgets/global_streak_banner.dart';
 import '../../../habits/presentation/widgets/today_summary_card.dart';
 import '../../../../core/storage/user_settings_service.dart';
 
@@ -15,6 +17,7 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final habitsState = ref.watch(habitListProvider);
     final userName = ref.watch(userNameProvider);
+    final globalStreak = ref.watch(globalStreakProvider);
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -62,6 +65,22 @@ class DashboardPage extends ConsumerWidget {
                                   .colorScheme
                                   .onSurfaceVariant,
                             ),
+                      ),
+                      const SizedBox(height: 16),
+                      globalStreak.when(
+                        data: (stats) => GlobalStreakBanner(stats: stats),
+                        loading: () => const GlobalStreakBanner(
+                          stats: GlobalStreakStats(
+                            currentStreak: 0,
+                            bestStreak: 0,
+                          ),
+                        ),
+                        error: (_, _) => const GlobalStreakBanner(
+                          stats: GlobalStreakStats(
+                            currentStreak: 0,
+                            bestStreak: 0,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 20),
                       if (items.isEmpty)

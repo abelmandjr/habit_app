@@ -1,14 +1,11 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/habit_type.dart';
-import '../../../../core/utils/date_utils.dart';
 import '../providers/habit_provider.dart';
 import '../widgets/habit_log_sheet.dart';
-import '../widgets/streak_calendar.dart';
-import '../widgets/streak_card.dart';
+import '../widgets/habit_report_section.dart';
 
 class HabitDetailPage extends ConsumerWidget {
   const HabitDetailPage({super.key, required this.habitId});
@@ -75,7 +72,6 @@ class HabitDetailPage extends ConsumerWidget {
           final habit = detail.habit;
           final type = HabitType.fromKey(habit.habitType);
           final unit = habit.unit ?? '';
-          final last7 = _last7DaysData(detail.completionDates);
           final notifier =
               ref.read(habitDetailNotifierProvider(habitId).notifier);
           final listItem = HabitWithToday(
@@ -151,81 +147,19 @@ class HabitDetailPage extends ConsumerWidget {
                           : 'Marcar como feito hoje',
                 ),
               ),
-              const SizedBox(height: 20),
-              StreakCard(streak: detail.streak),
-              const SizedBox(height: 20),
-              StreakCalendar(
-                key: ValueKey(detail.completionDates.length +
-                    (detail.completedToday ? 1 : 0)),
-                completionDates: detail.completionDates,
-                onDayTap: (day) => notifier.toggleDate(day),
-              ),
               const SizedBox(height: 24),
-              Text(
-                'Últimos 7 dias',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 160,
-                child: BarChart(
-                  BarChartData(
-                    alignment: BarChartAlignment.spaceAround,
-                    maxY: 1.2,
-                    titlesData: FlTitlesData(
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (value, meta) {
-                            final i = value.toInt();
-                            if (i < 0 || i >= last7.length) {
-                              return const SizedBox.shrink();
-                            }
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 6),
-                              child: Text(
-                                last7[i].label,
-                                style: Theme.of(context).textTheme.labelSmall,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      leftTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      topTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      rightTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                    ),
-                    gridData: const FlGridData(show: false),
-                    borderData: FlBorderData(show: false),
-                    barGroups: List.generate(last7.length, (i) {
-                      return BarChartGroupData(
-                        x: i,
-                        barRods: [
-                          BarChartRodData(
-                            toY: last7[i].done ? 1 : 0.15,
-                            color: last7[i].done
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest,
-                            width: 20,
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(6),
-                            ),
-                          ),
-                        ],
-                      );
-                    }),
-                  ),
+              HabitReportSection(
+                key: ValueKey(
+                  '${detail.completedToday}_${detail.todayValue}_${detail.yesNoReport?.daysDone}_${detail.quantitativeReport?.todayValue}',
                 ),
+                type: type,
+                unit: unit,
+                goalValue: habit.goalValue,
+                yesNoReport: detail.yesNoReport,
+                quantitativeReport: detail.quantitativeReport,
+                onDayTap: type == HabitType.yesNo
+                    ? (day) => notifier.toggleDate(day)
+                    : null,
               ),
             ],
           );
@@ -233,24 +167,4 @@ class HabitDetailPage extends ConsumerWidget {
       ),
     );
   }
-
-  List<_DayBar> _last7DaysData(Set<String> dates) {
-    final days = HabitDateUtils.lastDays(7);
-    const labels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-
-    return List.generate(7, (i) {
-      final day = days[i];
-      final key = HabitDateUtils.dateKey(day);
-      return _DayBar(
-        label: labels[day.weekday % 7],
-        done: dates.contains(key),
-      );
-    });
-  }
-}
-
-class _DayBar {
-  const _DayBar({required this.label, required this.done});
-  final String label;
-  final bool done;
 }

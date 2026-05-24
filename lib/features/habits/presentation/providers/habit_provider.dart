@@ -7,6 +7,7 @@ import '../../../../core/models/habit_type.dart';
 import '../../../../core/notifications/notification_service.dart';
 import '../../../../core/providers/database_provider.dart';
 import '../../../../core/storage/user_settings_service.dart';
+import '../../../../core/utils/habit_report_calculator.dart';
 import '../../../../core/utils/streak_calculator.dart';
 import '../../data/repositories/habit_repository_impl.dart';
 
@@ -20,6 +21,11 @@ final habitListProvider =
     StateNotifierProvider<HabitListNotifier, AsyncValue<List<HabitWithToday>>>(
   (ref) => HabitListNotifier(ref),
 );
+
+final globalStreakProvider = FutureProvider<GlobalStreakStats>((ref) async {
+  ref.watch(habitListProvider);
+  return ref.watch(habitRepositoryProvider).getGlobalStreakStats();
+});
 
 class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> {
   HabitListNotifier(this._ref) : super(const AsyncLoading()) {
@@ -58,12 +64,14 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
       await _repo.setQuantitativeToday(item.habit.id, quantity);
     }
     await _ref.read(habitDetailNotifierProvider(item.habit.id).notifier).refresh();
+    _ref.invalidate(globalStreakProvider);
     await load(silent: true);
   }
 
   Future<void> deleteHabit(String id) async {
     await _notifications.cancelHabitReminder(id);
     await _repo.deleteHabit(id);
+    _ref.invalidate(globalStreakProvider);
     await load(silent: true);
   }
 }
@@ -95,18 +103,26 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
         return;
       }
 
-      final dates = await _repo.getCompletionDates(_habitId);
-      final streak = await _repo.getStreakStats(_habitId);
+      final type = HabitType.fromKey(habit.habitType);
       final todayItems = await _repo.getHabitsWithTodayStatus();
       final todayItem = todayItems.firstWhere((h) => h.habit.id == _habitId);
+
+      YesNoHabitReport? yesNoReport;
+      QuantitativeHabitReport? quantitativeReport;
+
+      if (type == HabitType.yesNo) {
+        yesNoReport = await _repo.getYesNoReport(_habitId);
+      } else {
+        quantitativeReport = await _repo.getQuantitativeReport(_habitId);
+      }
 
       state = AsyncData(
         HabitDetailState(
           habit: habit,
-          completionDates: dates,
-          streak: streak,
           completedToday: todayItem.completedToday,
           todayValue: todayItem.todayValue,
+          yesNoReport: yesNoReport,
+          quantitativeReport: quantitativeReport,
         ),
       );
     } catch (e, st) {
@@ -121,14 +137,17 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
     if (HabitType.fromKey(habit.habitType) == HabitType.yesNo) {
       await _repo.toggleToday(_habitId);
     }
+    _ref.invalidate(globalStreakProvider);
     await refresh();
     await _ref.read(habitListProvider.notifier).load(silent: true);
   }
 
   Future<void> toggleDate(DateTime day) async {
     final key = _dateKey(day);
-    final done = (state.valueOrNull?.completionDates ?? {}).contains(key);
+    final dates = state.valueOrNull?.yesNoReport?.completionDates ?? {};
+    final done = dates.contains(key);
     await _repo.setCompletion(_habitId, key, !done);
+    _ref.invalidate(globalStreakProvider);
     await refresh();
     await _ref.read(habitListProvider.notifier).load(silent: true);
   }
@@ -140,17 +159,30 @@ String _dateKey(DateTime d) =>
 class HabitDetailState {
   const HabitDetailState({
     required this.habit,
-    required this.completionDates,
-    required this.streak,
     required this.completedToday,
     this.todayValue,
+    this.yesNoReport,
+    this.quantitativeReport,
   });
 
   final HabitData habit;
-  final Set<String> completionDates;
-  final StreakStats streak;
   final bool completedToday;
   final double? todayValue;
+  final YesNoHabitReport? yesNoReport;
+  final QuantitativeHabitReport? quantitativeReport;
+
+  StreakStats get streak =>
+      yesNoReport?.streak ??
+      quantitativeReport?.streak ??
+      const StreakStats(
+        currentStreak: 0,
+        bestStreak: 0,
+        completedToday: false,
+        totalCompletions: 0,
+      );
+
+  Set<String> get completionDates =>
+      yesNoReport?.completionDates ?? {};
 }
 
 final habitFormProvider =
