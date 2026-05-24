@@ -8,18 +8,25 @@ class StreakCalendar extends StatefulWidget {
     super.key,
     required this.completionDates,
     required this.habitCreatedAt,
+    this.loggedDates,
     this.onDayTap,
     this.initialMonth,
   });
 
+  /// Dias em que a meta foi atingida (amarelo).
   final Set<String> completionDates;
+
+  /// Dias com qualquer registo, mesmo abaixo da meta (vermelho se não concluído).
+  final Set<String>? loggedDates;
+
   final DateTime habitCreatedAt;
   final void Function(DateTime day)? onDayTap;
   final DateTime? initialMonth;
 
   static const completedYellow = Color(0xFFFFD54F);
-  static const missedRed = Color(0xFFEF5350);
+  static const loggedIncompleteRed = Color(0xFFEF5350);
   static const todayBlue = Color(0xFF42A5F5);
+  static const neutralFill = Color(0x00000000);
 
   @override
   State<StreakCalendar> createState() => _StreakCalendarState();
@@ -58,7 +65,6 @@ class _StreakCalendarState extends State<StreakCalendar> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final today = HabitDateUtils.startOfDay(DateTime.now());
-    final created = HabitDateUtils.startOfDay(widget.habitCreatedAt);
     final weeks = _buildWeeks(_displayedMonth);
 
     return Column(
@@ -75,8 +81,11 @@ class _StreakCalendarState extends State<StreakCalendar> {
           spacing: 12,
           runSpacing: 4,
           children: [
-            _LegendDot(color: StreakCalendar.completedYellow, label: 'Feito'),
-            _LegendDot(color: StreakCalendar.missedRed, label: 'Não feito'),
+            _LegendDot(color: StreakCalendar.completedYellow, label: 'Concluído'),
+            _LegendDot(
+              color: StreakCalendar.loggedIncompleteRed,
+              label: 'Registado',
+            ),
             _LegendDot(color: StreakCalendar.todayBlue, label: 'Hoje'),
           ],
         ),
@@ -153,10 +162,13 @@ class _StreakCalendarState extends State<StreakCalendar> {
                       }
                       return Expanded(
                         child: _HeatmapDay(
+                          key: ValueKey(
+                            '${HabitDateUtils.dateKey(day)}_${widget.completionDates.contains(HabitDateUtils.dateKey(day))}_${widget.loggedDates?.contains(HabitDateUtils.dateKey(day))}',
+                          ),
                           day: day,
                           today: today,
-                          created: created,
                           completionDates: widget.completionDates,
+                          loggedDates: widget.loggedDates,
                           onTap: widget.onDayTap,
                         ),
                       );
@@ -196,17 +208,18 @@ class _StreakCalendarState extends State<StreakCalendar> {
 
 class _HeatmapDay extends StatelessWidget {
   const _HeatmapDay({
+    super.key,
     required this.day,
     required this.today,
-    required this.created,
     required this.completionDates,
+    this.loggedDates,
     this.onTap,
   });
 
   final DateTime day;
   final DateTime today;
-  final DateTime created;
   final Set<String> completionDates;
+  final Set<String>? loggedDates;
   final void Function(DateTime day)? onTap;
 
   @override
@@ -214,39 +227,46 @@ class _HeatmapDay extends StatelessWidget {
     final key = HabitDateUtils.dateKey(day);
     final isToday = _sameDay(day, today);
     final isFuture = day.isAfter(today);
-    final isBeforeCreation = day.isBefore(created);
+    final dayNorm = HabitDateUtils.startOfDay(day);
     final completed = completionDates.contains(key);
+    final logged = loggedDates?.contains(key) ?? completed;
 
-    Color? fill;
-    Color textColor = Colors.black87;
+    final theme = Theme.of(context);
+    Color fill = theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35);
+    Color textColor = theme.colorScheme.onSurfaceVariant;
     Border? border;
 
-    if (isBeforeCreation) {
-      fill = Colors.transparent;
-      textColor = Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.35);
-    } else if (isFuture) {
-      fill = Theme.of(context).colorScheme.surfaceContainerHighest;
-      textColor = Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5);
+    if (isFuture) {
+      fill = theme.colorScheme.surfaceContainerHighest;
+      textColor = theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5);
     } else if (isToday) {
       border = Border.all(color: StreakCalendar.todayBlue, width: 2.5);
-      fill = completed ? StreakCalendar.completedYellow : StreakCalendar.missedRed;
-      textColor = completed ? Colors.black87 : Colors.white;
+      if (completed) {
+        fill = StreakCalendar.completedYellow;
+        textColor = Colors.black87;
+      } else if (logged) {
+        fill = StreakCalendar.loggedIncompleteRed;
+        textColor = Colors.white;
+      }
     } else if (completed) {
       fill = StreakCalendar.completedYellow;
-    } else {
-      fill = StreakCalendar.missedRed;
+      textColor = Colors.black87;
+    } else if (logged) {
+      fill = StreakCalendar.loggedIncompleteRed;
       textColor = Colors.white;
     }
+    // Sem registo: mantém fill neutro (passado ou antes da criação).
 
-    final canTap = onTap != null && !isFuture && !isBeforeCreation;
+    // Permite editar qualquer dia passado (incl. antes da criação) para migração de histórico.
+    final canTap = onTap != null && !isFuture;
 
     return Padding(
       padding: const EdgeInsets.all(2),
-      child: Material(
-        color: fill,
-        borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          onTap: canTap ? () => onTap!(day) : null,
+      child: GestureDetector(
+        onTap: canTap ? () => onTap!(dayNorm) : null,
+        behavior: HitTestBehavior.opaque,
+        child: Material(
+          color: fill,
           borderRadius: BorderRadius.circular(8),
           child: Container(
             height: 32,

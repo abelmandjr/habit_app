@@ -81,11 +81,6 @@ class HabitTodayTile extends StatelessWidget {
                       habit.title,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        decoration:
-                            done ? TextDecoration.lineThrough : null,
-                        color: done
-                            ? theme.colorScheme.onSurface.withValues(alpha: 0.65)
-                            : null,
                       ),
                     ),
                     const SizedBox(height: 4),

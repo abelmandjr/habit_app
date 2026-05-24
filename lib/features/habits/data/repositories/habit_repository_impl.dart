@@ -162,6 +162,7 @@ class HabitRepositoryImpl {
         history: [],
         streak: StreakCalculator.compute({}),
         goalMetDates: {},
+        loggedDates: {},
       );
     }
     final completions = await db.getCompletionsForHabit(habitId);

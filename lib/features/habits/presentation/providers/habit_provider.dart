@@ -72,6 +72,10 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
       _applyOptimisticToday(item.habit.id, yesNo: yesNo, quantity: quantity);
     }
 
+    _ref
+        .read(habitDetailNotifierProvider(item.habit.id).notifier)
+        .applyLogForDate(dateKey, yesNo: yesNo, quantity: quantity);
+
     try {
       if (item.type == HabitType.yesNo && yesNo != null) {
         await _repo.setYesNoForDate(item.habit.id, dateKey, yesNo);
@@ -202,6 +206,78 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
         );
   }
 
+  void applyLogForDate(
+    String dateKey, {
+    bool? yesNo,
+    double? quantity,
+  }) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    final isToday = dateKey == HabitDateUtils.todayKey();
+    final type = HabitType.fromKey(current.habit.habitType);
+
+    if (type == HabitType.yesNo && yesNo != null && current.yesNoReport != null) {
+      final dates = Set<String>.from(current.yesNoReport!.completionDates);
+      if (yesNo) {
+        dates.add(dateKey);
+      } else {
+        dates.remove(dateKey);
+      }
+      state = AsyncData(
+        current.copyWith(
+          completedToday: isToday ? yesNo : current.completedToday,
+          yesNoReport: HabitReportCalculator.buildYesNoReport(
+            habit: current.habit,
+            completionDates: dates,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (type == HabitType.quantitative &&
+        quantity != null &&
+        current.quantitativeReport != null) {
+      final report = current.quantitativeReport!;
+      final goal = current.habit.goalValue;
+      final met = quantity > 0 && quantity >= goal;
+      final dates = Set<String>.from(report.goalMetDates);
+      final logged = Set<String>.from(report.loggedDates);
+      if (met) {
+        dates.add(dateKey);
+      } else {
+        dates.remove(dateKey);
+      }
+      if (quantity > 0) {
+        logged.add(dateKey);
+      } else {
+        logged.remove(dateKey);
+      }
+      state = AsyncData(
+        current.copyWith(
+          completedToday: isToday ? met : current.completedToday,
+          todayValue: isToday ? (quantity > 0 ? quantity : null) : current.todayValue,
+          quantitativeReport: QuantitativeHabitReport(
+            todayValue: isToday ? quantity : report.todayValue,
+            dailyAverage: report.dailyAverage,
+            totalAccumulated: report.totalAccumulated,
+            bestDayValue: report.bestDayValue,
+            bestDayDate: report.bestDayDate,
+            goalProgress: isToday && goal > 0
+                ? (quantity / goal).clamp(0.0, 1.0)
+                : report.goalProgress,
+            goalMetToday: isToday ? met : report.goalMetToday,
+            history: report.history,
+            streak: StreakCalculator.compute(dates),
+            goalMetDates: dates,
+            loggedDates: logged,
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> logForDate(
     DateTime day, {
     bool? yesNo,
@@ -209,20 +285,8 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
   }) async {
     final key = HabitDateUtils.dateKey(day);
     final isToday = key == HabitDateUtils.todayKey();
-    final current = state.valueOrNull;
 
-    if (current != null && isToday) {
-      if (yesNo != null) {
-        state = AsyncData(current.copyWith(completedToday: yesNo));
-      } else if (quantity != null) {
-        state = AsyncData(
-          current.copyWith(
-            todayValue: quantity > 0 ? quantity : null,
-            completedToday: quantity >= current.habit.goalValue,
-          ),
-        );
-      }
-    }
+    applyLogForDate(key, yesNo: yesNo, quantity: quantity);
 
     if (yesNo != null) {
       await _repo.setYesNoForDate(_habitId, key, yesNo);
@@ -279,7 +343,16 @@ class HabitDetailState {
       );
 
   Set<String> get completionDates =>
-      yesNoReport?.completionDates ?? {};
+      yesNoReport?.completionDates ??
+      quantitativeReport?.goalMetDates ??
+      {};
+
+  String get calendarDatesKey {
+    final done = completionDates.toList()..sort();
+    final logged = (quantitativeReport?.loggedDates ?? completionDates).toList()
+      ..sort();
+    return '${done.join('|')}::${logged.join('|')}';
+  }
 }
 
 final habitFormProvider =

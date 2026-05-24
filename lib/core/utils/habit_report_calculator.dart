@@ -50,6 +50,7 @@ class QuantitativeHabitReport {
     required this.history,
     required this.streak,
     required this.goalMetDates,
+    required this.loggedDates,
   });
 
   final double todayValue;
@@ -62,6 +63,7 @@ class QuantitativeHabitReport {
   final List<QuantitativeDayValue> history;
   final StreakStats streak;
   final Set<String> goalMetDates;
+  final Set<String> loggedDates;
 }
 
 class HabitReportCalculator {
@@ -149,6 +151,8 @@ class HabitReportCalculator {
         )
         .toList();
 
+    final loggedDates = rowsWithValue.map((r) => r.date).toSet();
+
     return QuantitativeHabitReport(
       todayValue: todayValue,
       dailyAverage: average,
@@ -160,6 +164,7 @@ class HabitReportCalculator {
       history: history,
       streak: StreakCalculator.compute(goalMetDates),
       goalMetDates: goalMetDates,
+      loggedDates: loggedDates,
     );
   }
 

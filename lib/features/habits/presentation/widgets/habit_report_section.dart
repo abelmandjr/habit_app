@@ -90,7 +90,11 @@ class _YesNoReportView extends StatelessWidget {
         StreakCard(streak: report.streak),
         const SizedBox(height: 20),
         StreakCalendar(
+          key: ValueKey(
+            'yn_${report.completionDates.length}_${report.completionDates.hashCode}',
+          ),
           completionDates: report.completionDates,
+          loggedDates: report.completionDates,
           habitCreatedAt: habitCreatedAt,
           onDayTap: onDayTap,
         ),
@@ -199,7 +203,11 @@ class _QuantitativeReportView extends StatelessWidget {
         StreakCard(streak: report.streak),
         const SizedBox(height: 20),
         StreakCalendar(
+          key: ValueKey(
+            'qt_${report.goalMetDates.length}_${report.goalMetDates.hashCode}',
+          ),
           completionDates: report.goalMetDates,
+          loggedDates: report.loggedDates,
           habitCreatedAt: habitCreatedAt,
           onDayTap: onDayTap,
         ),

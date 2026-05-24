@@ -14,6 +14,7 @@ class HabitDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(habitListProvider);
     final detailAsync = ref.watch(habitDetailNotifierProvider(habitId));
 
     return Scaffold(
@@ -157,7 +158,7 @@ class HabitDetailPage extends ConsumerWidget {
               const SizedBox(height: 24),
               HabitReportSection(
                 key: ValueKey(
-                  '${detail.completedToday}_${detail.todayValue}_${detail.yesNoReport?.daysDone}_${detail.quantitativeReport?.todayValue}',
+                  '${detail.completedToday}_${detail.calendarDatesKey}',
                 ),
                 type: type,
                 unit: unit,
