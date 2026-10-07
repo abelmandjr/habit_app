@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -24,7 +25,7 @@ class NotificationService {
     if (_initialized) return;
 
     tz.initializeTimeZones();
-    tz.setLocalLocation(tz.local);
+    await _configureLocalTimezone();
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings(
@@ -47,6 +48,16 @@ class NotificationService {
     }
 
     _initialized = true;
+  }
+
+  /// Sem isto, `tz.local` fica em UTC e os lembretes disparam à hora errada.
+  Future<void> _configureLocalTimezone() async {
+    try {
+      final info = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(info.identifier));
+    } catch (e) {
+      debugPrint('Fuso horário local indisponível, a usar UTC: $e');
+    }
   }
 
   Future<void> rescheduleAll(AppDatabase db) async {
