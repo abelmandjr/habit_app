@@ -130,8 +130,21 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
   }
 
   Future<void> deleteHabit(String id) async {
-    await _notifications.cancelHabitReminder(id);
-    await _repo.deleteHabit(id);
+    // Remove do estado antes de qualquer await: o Dismissible exige que o
+    // item saia da árvore no mesmo frame em que é dispensado.
+    final previous = state;
+    final current = state.valueOrNull;
+    if (current != null) {
+      state = AsyncData(current.where((h) => h.habit.id != id).toList());
+    }
+
+    try {
+      await _notifications.cancelHabitReminder(id);
+      await _repo.deleteHabit(id);
+    } catch (_) {
+      state = previous;
+      rethrow;
+    }
     _ref.invalidate(globalStreakProvider);
     await load(silent: true);
   }
