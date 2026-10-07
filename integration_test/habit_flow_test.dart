@@ -9,6 +9,7 @@ import 'package:habit_app/main.dart';
 import 'package:integration_test/integration_test.dart';
 
 import '../test/helpers/fakes.dart';
+import '../test/helpers/test_app.dart';
 
 /// Fluxo completo no dispositivo (tarefas 1.2 e 1.12): criar um hábito pela UI,
 /// marcá-lo, ver o streak global atualizar e eliminá-lo com swipe.
@@ -34,7 +35,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Nenhum hábito ainda'), findsOneWidget);
+    expect(find.text(testL10n.emptyTitle), findsOneWidget);
 
     // Criar pela UI.
     await tester.tap(find.byType(FloatingActionButton));
@@ -80,12 +81,12 @@ void main() {
       const Offset(-600, 0),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+    await tester.tap(find.widgetWithText(FilledButton, testL10n.actionDelete));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
     expect(find.text('Teste de integração'), findsNothing);
-    expect(find.text('Nenhum hábito ainda'), findsOneWidget);
+    expect(find.text(testL10n.emptyTitle), findsOneWidget);
     expect(banner('0 dias  ·  melhor: 0 dias'), findsOneWidget);
     expect(await db.getAllHabits(), isEmpty);
   });

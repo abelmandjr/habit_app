@@ -10,6 +10,7 @@ import 'package:habit_app/core/utils/date_utils.dart';
 import 'package:habit_app/features/dashboard/presentation/pages/dashboard_page.dart';
 
 import '../../helpers/fakes.dart';
+import '../../helpers/test_app.dart';
 
 /// Tarefa 1.9: o registo quantitativo aceita vírgula e ponto decimal.
 void main() {
@@ -35,7 +36,7 @@ void main() {
           dbProvider.overrideWithValue(db),
           notificationServiceProvider.overrideWithValue(FakeNotifications()),
         ],
-        child: const MaterialApp(home: DashboardPage()),
+        child: testApp(const DashboardPage()),
       ),
     );
     await tester.pumpAndSettle();
@@ -43,7 +44,7 @@ void main() {
     await tester.tap(find.text('Beber água'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), typed);
-    await tester.tap(find.widgetWithText(FilledButton, 'Salvar'));
+    await tester.tap(find.widgetWithText(FilledButton, testL10n.actionSave));
     await tester.pumpAndSettle();
   }
 

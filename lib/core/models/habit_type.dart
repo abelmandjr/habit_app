@@ -1,11 +1,11 @@
 enum HabitType {
-  yesNo('yesNo', 'Sim ou não'),
-  quantitative('quantitative', 'Quantitativo');
+  yesNo('yesNo'),
+  quantitative('quantitative');
 
-  const HabitType(this.storageKey, this.label);
+  const HabitType(this.storageKey);
 
+  /// Valor guardado na BD. O texto mostrado vem do ARB (HabitTypeLabel).
   final String storageKey;
-  final String label;
 
   static HabitType fromKey(String key) {
     return HabitType.values.firstWhere(

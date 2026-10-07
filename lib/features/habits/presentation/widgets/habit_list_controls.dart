@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/habit_list_preferences.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../utils/labels.dart';
 
 class HabitListControls extends ConsumerWidget {
   const HabitListControls({super.key});
@@ -11,6 +13,7 @@ class HabitListControls extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prefs = ref.watch(habitListPreferencesProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Row(
       children: [
@@ -19,14 +22,14 @@ class HabitListControls extends ConsumerWidget {
             onPressed: () => _showSortSheet(context, ref, prefs.sortBy),
             icon: const Icon(Icons.sort_rounded, size: 18),
             label: Text(
-              prefs.sortBy.label,
+              prefs.sortBy.label(l10n),
               overflow: TextOverflow.ellipsis,
             ),
           ),
         ),
         const SizedBox(width: 8),
         FilterChip(
-          label: const Text('Ocultar feitos'),
+          label: Text(l10n.hideDone),
           selected: prefs.hideCompleted,
           onSelected: (v) =>
               ref.read(habitListPreferencesProvider.notifier).setHideCompleted(v),
@@ -50,7 +53,7 @@ class HabitListControls extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'Ordenar por',
+                AppLocalizations.of(context).sortBy,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -63,7 +66,7 @@ class HabitListControls extends ConsumerWidget {
                       ? Icons.radio_button_checked_rounded
                       : Icons.radio_button_off_rounded,
                 ),
-                title: Text(option.label),
+                title: Text(option.label(AppLocalizations.of(context))),
                 onTap: () {
                   ref
                       .read(habitListPreferencesProvider.notifier)

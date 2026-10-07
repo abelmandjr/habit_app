@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/date_utils.dart';
+import '../../../../l10n/app_formats.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Heatmap mensal: amarelo = concluído, vermelho = não concluído, azul = hoje.
 class StreakCalendar extends StatefulWidget {
@@ -33,22 +35,6 @@ class StreakCalendar extends StatefulWidget {
 }
 
 class _StreakCalendarState extends State<StreakCalendar> {
-  static const _weekdays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-  static const _monthsPt = [
-    'Janeiro',
-    'Fevereiro',
-    'Março',
-    'Abril',
-    'Maio',
-    'Junho',
-    'Julho',
-    'Agosto',
-    'Setembro',
-    'Outubro',
-    'Novembro',
-    'Dezembro',
-  ];
-
   late DateTime _displayedMonth;
 
   @override
@@ -64,6 +50,7 @@ class _StreakCalendarState extends State<StreakCalendar> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final today = HabitDateUtils.startOfDay(DateTime.now());
     final weeks = _buildWeeks(_displayedMonth);
 
@@ -71,7 +58,7 @@ class _StreakCalendarState extends State<StreakCalendar> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Calendário de progresso',
+          l10n.calendarTitle,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -81,12 +68,18 @@ class _StreakCalendarState extends State<StreakCalendar> {
           spacing: 12,
           runSpacing: 4,
           children: [
-            _LegendDot(color: StreakCalendar.completedYellow, label: 'Concluído'),
+            _LegendDot(
+              color: StreakCalendar.completedYellow,
+              label: l10n.legendDone,
+            ),
             _LegendDot(
               color: StreakCalendar.loggedIncompleteRed,
-              label: 'Registado',
+              label: l10n.legendLogged,
             ),
-            _LegendDot(color: StreakCalendar.todayBlue, label: 'Hoje'),
+            _LegendDot(
+              color: StreakCalendar.todayBlue,
+              label: l10n.legendToday,
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -115,7 +108,7 @@ class _StreakCalendarState extends State<StreakCalendar> {
                   ),
                   Expanded(
                     child: Text(
-                      '${_monthsPt[_displayedMonth.month - 1]} ${_displayedMonth.year}',
+                      AppFormats.monthYear(_displayedMonth),
                       textAlign: TextAlign.center,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
@@ -136,7 +129,7 @@ class _StreakCalendarState extends State<StreakCalendar> {
               ),
               const SizedBox(height: 4),
               Row(
-                children: _weekdays
+                children: AppFormats.weekdayInitials()
                     .map(
                       (d) => Expanded(
                         child: Center(

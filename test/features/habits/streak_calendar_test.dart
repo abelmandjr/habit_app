@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:habit_app/features/habits/presentation/widgets/streak_calendar.dart';
+import '../../helpers/test_app.dart';
 
 /// Tarefa 1.6: os dias anteriores à data de início não podem ser editados.
 void main() {
@@ -9,8 +10,8 @@ void main() {
   ) async {
     final tapped = <DateTime>[];
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testApp(
+        Scaffold(
           body: SingleChildScrollView(
             child: StreakCalendar(
               completionDates: const {},

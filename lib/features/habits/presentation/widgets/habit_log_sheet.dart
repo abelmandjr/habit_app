@@ -5,6 +5,8 @@ import '../../../../core/models/habit_type.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/error_feedback.dart';
 import '../../data/repositories/habit_repository_impl.dart';
+import '../../../../l10n/app_formats.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Bottom sheet para registar hábito (hoje ou data passada).
 Future<void> showHabitLogSheet({
@@ -24,7 +26,7 @@ Future<void> showHabitLogSheet({
   Future<void> submit(bool? yesNo, double? quantity) => runWithErrorFeedback(
         context,
         () => onSubmit(yesNo, quantity),
-        message: ErrorMessages.saveLog,
+        message: AppLocalizations.of(context).errorSaveLog,
       );
 
   if (item.type == HabitType.yesNo) {
@@ -77,7 +79,8 @@ class _YesNoSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dateLabel = _formatDate(date);
+    final l10n = AppLocalizations.of(context);
+    final dateLabel = AppFormats.dayMonthYear(date);
     final isToday =
         HabitDateUtils.dateKey(date) == HabitDateUtils.todayKey();
 
@@ -94,7 +97,7 @@ class _YesNoSheet extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            isToday ? 'Hoje' : dateLabel,
+            isToday ? l10n.today : dateLabel,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -102,8 +105,8 @@ class _YesNoSheet extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             isToday
-                ? 'Você fez este hábito hoje?'
-                : 'Registar histórico para este dia',
+                ? l10n.logQuestionToday
+                : l10n.logPastDay,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -115,7 +118,7 @@ class _YesNoSheet extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => onSelect(false),
                   icon: const Icon(Icons.close_rounded),
-                  label: const Text('Não'),
+                  label: Text(l10n.no),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     foregroundColor: theme.colorScheme.error,
@@ -127,7 +130,7 @@ class _YesNoSheet extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: () => onSelect(true),
                   icon: const Icon(Icons.check_rounded),
-                  label: const Text('Sim'),
+                  label: Text(l10n.yes),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
@@ -139,20 +142,12 @@ class _YesNoSheet extends StatelessWidget {
             const SizedBox(height: 12),
             TextButton(
               onPressed: () => onSelect(false),
-              child: const Text('Remover registo deste dia'),
+              child: Text(l10n.logRemoveDay),
             ),
           ],
         ],
       ),
     );
-  }
-
-  String _formatDate(DateTime d) {
-    const months = [
-      'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-      'jul', 'ago', 'set', 'out', 'nov', 'dez',
-    ];
-    return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
 }
 
@@ -185,7 +180,7 @@ class _QuantitativeSheetState extends State<_QuantitativeSheet> {
     super.initState();
     _controller = TextEditingController(
       text: widget.currentValue != null && widget.currentValue! > 0
-          ? _formatValue(widget.currentValue!)
+          ? AppFormats.number(widget.currentValue!)
           : '',
     );
   }
@@ -196,15 +191,11 @@ class _QuantitativeSheetState extends State<_QuantitativeSheet> {
     super.dispose();
   }
 
-  String _formatValue(double v) {
-    if (v == v.roundToDouble()) return v.toInt().toString();
-    return v.toString();
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final unit = widget.unit.isNotEmpty ? ' ${widget.unit}' : '';
+    final l10n = AppLocalizations.of(context);
+    final goal = AppFormats.quantity(widget.goal, widget.unit);
     final isToday =
         HabitDateUtils.dateKey(widget.date) == HabitDateUtils.todayKey();
 
@@ -228,8 +219,8 @@ class _QuantitativeSheetState extends State<_QuantitativeSheet> {
           const SizedBox(height: 4),
           Text(
             isToday
-                ? 'Registo de hoje · meta ${widget.goal}$unit'
-                : 'Registo histórico · meta ${widget.goal}$unit',
+                ? l10n.logTodayGoal(goal)
+                : l10n.logPastGoal(goal),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -244,7 +235,7 @@ class _QuantitativeSheetState extends State<_QuantitativeSheet> {
             ],
             autofocus: true,
             decoration: InputDecoration(
-              labelText: 'Valor atingido',
+              labelText: l10n.logValueLabel,
               suffixText: widget.unit.isNotEmpty ? widget.unit : null,
               border: const OutlineInputBorder(),
             ),
@@ -258,14 +249,14 @@ class _QuantitativeSheetState extends State<_QuantitativeSheet> {
               if (parsed == null) return;
               await widget.onSubmit(parsed);
             },
-            child: const Text('Salvar'),
+            child: Text(l10n.actionSave),
           ),
           if (widget.currentValue != null && widget.currentValue! > 0)
             TextButton(
               onPressed: () async {
                 await widget.onSubmit(0);
               },
-              child: const Text('Limpar registo deste dia'),
+              child: Text(l10n.logClearDay),
             ),
         ],
       ),

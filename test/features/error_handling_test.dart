@@ -6,13 +6,13 @@ import 'package:habit_app/core/database/app_database.dart';
 import 'package:habit_app/core/notifications/notification_service.dart';
 import 'package:habit_app/core/providers/database_provider.dart';
 import 'package:habit_app/core/utils/date_utils.dart';
-import 'package:habit_app/core/widgets/error_feedback.dart';
 import 'package:habit_app/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:habit_app/features/habits/presentation/pages/habit_detail_page.dart';
 import 'package:habit_app/features/habits/presentation/pages/habit_form_page.dart';
 import 'package:habit_app/features/habits/presentation/providers/habit_provider.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/test_app.dart';
 
 /// Tarefa 1.3: falhas de escrita e de leitura mostram feedback ao utilizador
 /// e repõem o estado, sem exceções por apanhar.
@@ -35,7 +35,7 @@ void main() {
           habitRepositoryProvider.overrideWithValue(repo),
           notificationServiceProvider.overrideWithValue(FakeNotifications()),
         ],
-        child: MaterialApp(home: page),
+        child: testApp(page),
       ),
     );
     await tester.pumpAndSettle();
@@ -54,7 +54,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text(ErrorMessages.saveLog), findsOneWidget);
+      expect(find.text(testL10n.errorSaveLog), findsOneWidget);
       expect(find.byIcon(Icons.check_rounded), findsNothing);
       expect(await db.isCompletedOn('h1', HabitDateUtils.todayKey()), isFalse);
     });
@@ -67,11 +67,11 @@ void main() {
 
       await tester.drag(find.byType(Dismissible), const Offset(-600, 0));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+      await tester.tap(find.widgetWithText(FilledButton, testL10n.actionDelete));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text(ErrorMessages.deleteHabit), findsOneWidget);
+      expect(find.text(testL10n.errorDeleteHabit), findsOneWidget);
       expect(find.text('Meditar'), findsOneWidget);
       expect(await db.getAllHabits(), hasLength(1));
     });
@@ -83,9 +83,9 @@ void main() {
       repo.failedLoads = 1;
       await pumpPage(tester, const DashboardPage());
 
-      expect(find.text('Não foi possível carregar os hábitos.'), findsOneWidget);
+      expect(find.text(testL10n.errorLoadHabits), findsOneWidget);
 
-      await tester.tap(find.text('Tentar de novo'));
+      await tester.tap(find.text(testL10n.actionRetry));
       await tester.pumpAndSettle();
 
       expect(find.text('Meditar'), findsOneWidget);
@@ -103,7 +103,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text(ErrorMessages.saveLog), findsOneWidget);
+    expect(find.text(testL10n.errorSaveLog), findsOneWidget);
     expect(find.text('Marcar como feito hoje'), findsOneWidget);
   });
 
@@ -129,7 +129,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text(ErrorMessages.saveHabit), findsOneWidget);
+    expect(find.text(testL10n.errorSaveHabit), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Título'), findsOneWidget);
     expect(await db.getAllHabits(), isEmpty);
   });

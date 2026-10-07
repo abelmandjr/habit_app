@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/models/habit_type.dart';
 import '../../data/repositories/habit_repository_impl.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../../l10n/app_formats.dart';
 
 class HabitTodayTile extends StatelessWidget {
   const HabitTodayTile({
@@ -25,6 +27,7 @@ class HabitTodayTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final habit = item.habit;
     final isQuant = item.type == HabitType.quantitative;
     final unit = habit.unit ?? '';
@@ -90,8 +93,10 @@ class HabitTodayTile extends StatelessWidget {
                         const SizedBox(width: 6),
                         _Tag(
                           label: isQuant
-                              ? 'Meta: ${habit.goalValue}$unit'
-                              : 'Sim / Não',
+                              ? l10n.tileGoal(
+                                  AppFormats.quantity(habit.goalValue, unit),
+                                )
+                              : l10n.yesNoTag,
                           muted: done,
                         ),
                         if (item.currentStreak > 0) ...[
@@ -109,7 +114,10 @@ class HabitTodayTile extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          'Hoje: ${item.todayValue}${unit.isNotEmpty ? ' $unit' : ''} / ${habit.goalValue}$unit',
+                          l10n.tileTodayValue(
+                            AppFormats.number(item.todayValue!),
+                            AppFormats.quantity(habit.goalValue, unit),
+                          ),
                           style: theme.textTheme.labelMedium?.copyWith(
                             color: done ? _completedBorder : _pendingBorder,
                             fontWeight: FontWeight.w600,
@@ -122,7 +130,7 @@ class HabitTodayTile extends StatelessWidget {
               IconButton(
                 onPressed: onTap,
                 icon: const Icon(Icons.chevron_right_rounded),
-                tooltip: 'Ver detalhes',
+                tooltip: l10n.tileDetails,
               ),
             ],
           ),

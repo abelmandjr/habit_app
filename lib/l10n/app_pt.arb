@@ -1,0 +1,172 @@
+{
+  "@@locale": "pt",
+
+  "appTitle": "Hábitos",
+
+  "actionCancel": "Cancelar",
+  "actionSave": "Guardar",
+  "actionDelete": "Eliminar",
+  "actionRetry": "Tentar de novo",
+  "actionOpenSettings": "Abrir definições",
+  "actionNotNow": "Agora não",
+  "yes": "Sim",
+  "no": "Não",
+  "today": "Hoje",
+
+  "errorSaveLog": "Não foi possível guardar o registo. Tenta novamente.",
+  "errorDeleteHabit": "Não foi possível eliminar o hábito. Tenta novamente.",
+  "errorSaveHabit": "Não foi possível guardar o hábito. Tenta novamente.",
+  "errorSaveName": "Não foi possível guardar o nome. Tenta novamente.",
+  "errorLoadHabit": "Não foi possível abrir o hábito.",
+  "errorLoadData": "Não foi possível carregar os dados.",
+  "errorLoadHabits": "Não foi possível carregar os hábitos.",
+  "errorLoadHabitDetail": "Não foi possível carregar o hábito.",
+  "errorRequestNotificationPermission": "Não foi possível pedir permissão para as notificações.",
+  "errorCheckAlarmPermission": "Não foi possível verificar a permissão de alarmes.",
+  "errorOpenSettings": "Não foi possível abrir as definições.",
+
+  "dashboardTitle": "Hábitos",
+  "dashboardNewHabit": "Novo hábito",
+  "dashboardEditName": "Editar nome",
+  "greetingMorning": "Bom dia",
+  "greetingAfternoon": "Boa tarde",
+  "greetingEvening": "Boa noite",
+  "greetingWithName": "{period}, {name} 👋",
+  "@greetingWithName": {
+    "placeholders": { "period": { "type": "String" }, "name": { "type": "String" } }
+  },
+  "greetingWithoutName": "{period} 👋",
+  "@greetingWithoutName": {
+    "placeholders": { "period": { "type": "String" } }
+  },
+  "dashboardHint": "Sim/não: toca para marcar. Quantitativo: toca para registar. Desliza para eliminar.",
+  "dashboardAllDone": "Todos os hábitos de hoje já estão feitos.",
+  "nameDialogTitle": "O teu nome",
+  "nameDialogHint": "Como te devemos chamar?",
+  "emptyTitle": "Ainda não tens hábitos",
+  "emptyMessage": "Cria o teu primeiro hábito e acompanha o teu progresso diário.",
+  "deleteHabitTitle": "Eliminar hábito?",
+  "deleteHabitMessage": "Queres eliminar \"{title}\"? Todo o histórico será apagado.",
+  "@deleteHabitMessage": {
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "deleteHabitMessageGeneric": "Todo o histórico será apagado. Esta ação não pode ser desfeita.",
+
+  "detailTitle": "Detalhes",
+  "detailDeleteMenu": "Eliminar hábito",
+  "detailNotFound": "Hábito não encontrado",
+  "goalPerDay": "Meta: {goal}/dia",
+  "@goalPerDay": {
+    "placeholders": { "goal": { "type": "String" } }
+  },
+  "yesNoTag": "Sim / Não",
+  "reminderActive": "Lembrete ativo",
+  "logUpdateToday": "Atualizar o registo de hoje",
+  "logValueToday": "Registar o valor de hoje",
+  "doneToday": "Feito hoje",
+  "markDoneToday": "Marcar como feito hoje",
+
+  "formNewTitle": "Novo hábito",
+  "formEditTitle": "Editar hábito",
+  "formTypeQuestion": "Que tipo de hábito é?",
+  "formTypeHelp": "Escolhe como vais registar este hábito no dia a dia.",
+  "habitTypeYesNo": "Sim ou não",
+  "habitTypeYesNoExamples": "Ex.: meditar, tomar a medicação, ler",
+  "habitTypeQuantitative": "Quantitativo",
+  "habitTypeQuantitativeExamples": "Ex.: beber água, caminhar, horas de estudo",
+  "formTitleLabel": "Título",
+  "formTitleHintYesNo": "Ex.: Meditar",
+  "formTitleHintQuantitative": "Ex.: Beber água",
+  "formDescriptionLabel": "Descrição (opcional)",
+  "formCategory": "Categoria",
+  "formCustomCategorySwitch": "Criar categoria personalizada",
+  "formCustomCategoryLabel": "A tua categoria",
+  "formCustomCategoryHint": "Ex.: Espiritualidade, Finanças",
+  "formUnitLabel": "Unidade",
+  "formUnitHint": "Ex.: L, kg, min",
+  "formDailyGoal": "Meta diária",
+  "formReminder": "Lembrete diário",
+  "formReminderSubtitle": "Notificação à hora escolhida",
+  "formPickTime": "Escolher hora",
+  "formSaveChanges": "Guardar alterações",
+  "formCreate": "Criar hábito",
+  "formValidation": "Preenche o título, a categoria e a unidade (se for quantitativo).",
+  "formCreated": "Hábito criado",
+  "formUpdated": "Hábito atualizado",
+  "notificationPermissionDenied": "Sem permissão para notificações. Ativa-a nas definições do telemóvel para receberes lembretes.",
+  "exactAlarmTitle": "Lembretes à hora certa",
+  "exactAlarmMessage": "Para os lembretes chegarem à hora exata, permite \"Alarmes e lembretes\" nas definições da app. Sem isso, o Android pode atrasá-los.",
+  "exactAlarmWarning": "Os lembretes podem chegar atrasados: a app não tem permissão para alarmes exatos.",
+
+  "sortBy": "Ordenar por",
+  "sortName": "Nome",
+  "sortCategory": "Categoria",
+  "sortProgress": "Progresso de hoje",
+  "sortStreak": "Sequência",
+  "sortNewest": "Mais recentes",
+  "hideDone": "Ocultar feitos",
+
+  "logQuestionToday": "Fizeste este hábito hoje?",
+  "logPastDay": "Registar o histórico deste dia",
+  "logRemoveDay": "Remover o registo deste dia",
+  "logTodayGoal": "Registo de hoje · meta {goal}",
+  "@logTodayGoal": {
+    "placeholders": { "goal": { "type": "String" } }
+  },
+  "logPastGoal": "Registo histórico · meta {goal}",
+  "@logPastGoal": {
+    "placeholders": { "goal": { "type": "String" } }
+  },
+  "logValueLabel": "Valor atingido",
+  "logClearDay": "Limpar o registo deste dia",
+
+  "reportTitle": "Relatório",
+  "metricDaysDone": "Dias feitos",
+  "metricDaysMissed": "Dias falhados",
+  "metricSuccess": "Sucesso",
+  "metricTrackedDays": "Dias acompanhados",
+  "metricToday": "Hoje",
+  "metricDailyAverage": "Média diária",
+  "metricTotal": "Total acumulado",
+  "metricBestDay": "Melhor dia",
+  "reportTapToEdit": "Toca num dia para editar o histórico.",
+  "reportTapToEditValues": "Toca num dia para registar ou corrigir valores passados.",
+  "reportGoalProgress": "Progresso da meta de hoje",
+  "reportGoalMet": "✓ meta atingida",
+  "reportEvolution": "Evolução (últimos 30 dias)",
+  "chartGoal": "Meta",
+
+  "calendarTitle": "Calendário de progresso",
+  "legendDone": "Feito",
+  "legendLogged": "Registado",
+  "legendToday": "Hoje",
+
+  "streakCurrent": "Sequência atual",
+  "streakBest": "Melhor sequência",
+  "streakTotal": "Total",
+  "dayUnit": "{count, plural, =0{dias} =1{dia} other{dias}}",
+  "@dayUnit": {
+    "description": "Palavra 'dia(s)' que acompanha um número mostrado à parte. O =0 é explícito porque a regra CLDR de \"pt\" (brasileira) põe o 0 no singular; em PT-PT é \"0 dias\".",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "globalStreakBest": "melhor:",
+
+  "todaySummaryTitle": "Atividades de hoje",
+  "todayDone": "Feitas",
+  "todayPercent": "Percentagem",
+  "todayRemaining": "Faltam",
+
+  "tileGoal": "Meta: {goal}",
+  "@tileGoal": {
+    "placeholders": { "goal": { "type": "String" } }
+  },
+  "tileTodayValue": "Hoje: {value} / {goal}",
+  "@tileTodayValue": {
+    "placeholders": { "value": { "type": "String" }, "goal": { "type": "String" } }
+  },
+  "tileDetails": "Ver detalhes",
+
+  "notificationChannelName": "Lembretes de hábitos",
+  "notificationChannelDescription": "Notificações diárias para te lembrar dos teus hábitos",
+  "notificationTitle": "Hora do hábito"
+}

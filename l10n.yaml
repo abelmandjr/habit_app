@@ -1,0 +1,6 @@
+# Textos da app em ARB (decisão 12). O português de Portugal é a língua base.
+arb-dir: lib/l10n
+template-arb-file: app_pt.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+nullable-getter: false

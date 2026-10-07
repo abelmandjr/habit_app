@@ -9,6 +9,9 @@ import '../../../../core/notifications/notification_service.dart';
 import '../../../../core/storage/user_settings_service.dart';
 import '../../../../core/widgets/error_feedback.dart';
 import '../providers/habit_provider.dart';
+import '../../../../l10n/app_formats.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../utils/labels.dart';
 
 class HabitFormPage extends ConsumerStatefulWidget {
   const HabitFormPage({super.key, this.habitId});
@@ -41,7 +44,7 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
         final loaded = await runWithErrorFeedback(
           context,
           () => ref.read(habitFormProvider.notifier).loadForEdit(widget.habitId!),
-          message: ErrorMessages.loadHabit,
+          message: AppLocalizations.of(context).errorLoadHabit,
         );
         if (!mounted) return;
         if (loaded) {
@@ -75,31 +78,33 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
     final form = ref.watch(habitFormProvider);
     final categories = ref.watch(categoriesProvider);
     final isEditing = widget.habitId != null;
+    final l10n = AppLocalizations.of(context);
+    final pageTitle = isEditing ? l10n.formEditTitle : l10n.formNewTitle;
 
     if (form.isLoading) {
       return Scaffold(
-        appBar: AppBar(title: Text(isEditing ? 'Editar hábito' : 'Novo hábito')),
+        appBar: AppBar(title: Text(pageTitle)),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (!isEditing && form.step == HabitFormStep.pickType) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Novo hábito')),
+        appBar: AppBar(title: Text(l10n.formNewTitle)),
         body: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Qual o tipo de hábito?',
+                l10n.formTypeQuestion,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Escolha como você vai registrar este hábito no dia a dia.',
+                l10n.formTypeHelp,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -107,16 +112,16 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
               const SizedBox(height: 24),
               _TypeCard(
                 icon: Icons.check_circle_outline_rounded,
-                title: 'Sim ou não',
-                subtitle: 'Ex: meditar, tomar remédio, ler',
+                title: l10n.habitTypeYesNo,
+                subtitle: l10n.habitTypeYesNoExamples,
                 onTap: () =>
                     ref.read(habitFormProvider.notifier).selectType(HabitType.yesNo),
               ),
               const SizedBox(height: 12),
               _TypeCard(
                 icon: Icons.water_drop_outlined,
-                title: 'Quantitativo',
-                subtitle: 'Ex: beber água, caminhar, estudar horas',
+                title: l10n.habitTypeQuantitative,
+                subtitle: l10n.habitTypeQuantitativeExamples,
                 onTap: () => ref
                     .read(habitFormProvider.notifier)
                     .selectType(HabitType.quantitative),
@@ -131,7 +136,7 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Editar hábito' : 'Novo hábito'),
+        title: Text(pageTitle),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -142,14 +147,16 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
                 isQuant ? Icons.water_drop_outlined : Icons.check_rounded,
                 size: 18,
               ),
-              label: Text(form.habitType!.label),
+              label: Text(form.habitType!.label(l10n)),
             ),
           const SizedBox(height: 12),
           TextField(
             controller: _titleController,
             decoration: InputDecoration(
-              labelText: 'Título',
-              hintText: isQuant ? 'Ex: Beber água' : 'Ex: Meditar',
+              labelText: l10n.formTitleLabel,
+              hintText: isQuant
+                  ? l10n.formTitleHintQuantitative
+                  : l10n.formTitleHintYesNo,
             ),
             textCapitalization: TextCapitalization.sentences,
             onChanged: ref.read(habitFormProvider.notifier).updateTitle,
@@ -157,8 +164,8 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
           const SizedBox(height: 12),
           TextField(
             controller: _descriptionController,
-            decoration: const InputDecoration(
-              labelText: 'Descrição (opcional)',
+            decoration: InputDecoration(
+              labelText: l10n.formDescriptionLabel,
             ),
             maxLines: 3,
             textCapitalization: TextCapitalization.sentences,
@@ -167,13 +174,13 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Categoria',
+            l10n.formCategory,
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 8),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Criar categoria personalizada'),
+            title: Text(l10n.formCustomCategorySwitch),
             value: form.useCustomCategory,
             onChanged: (v) {
               ref.read(habitFormProvider.notifier).updateUseCustomCategory(v);
@@ -182,9 +189,9 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
           if (form.useCustomCategory)
             TextField(
               controller: _customCategoryController,
-              decoration: const InputDecoration(
-                labelText: 'Sua categoria',
-                hintText: 'Ex: Espiritual, Finanças',
+              decoration: InputDecoration(
+                labelText: l10n.formCustomCategoryLabel,
+                hintText: l10n.formCustomCategoryHint,
               ),
               textCapitalization: TextCapitalization.words,
               onChanged:
@@ -211,9 +218,9 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
           if (isQuant) ...[
             TextField(
               controller: _unitController,
-              decoration: const InputDecoration(
-                labelText: 'Unidade',
-                hintText: 'Ex: L, kg, min',
+              decoration: InputDecoration(
+                labelText: l10n.formUnitLabel,
+                hintText: l10n.formUnitHint,
               ),
               onChanged: ref.read(habitFormProvider.notifier).updateUnit,
             ),
@@ -234,7 +241,7 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
             Row(
               children: [
                 Text(
-                  'Meta diária',
+                  l10n.formDailyGoal,
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const Spacer(),
@@ -247,7 +254,7 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
                 Text(
-                  '${form.goalValue}${form.unit.isNotEmpty ? ' ${form.unit}' : ''}',
+                  AppFormats.quantity(form.goalValue, form.unit),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 IconButton(
@@ -262,8 +269,8 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
           const Divider(height: 32),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Lembrete diário'),
-            subtitle: const Text('Notificação no horário escolhido'),
+            title: Text(l10n.formReminder),
+            subtitle: Text(l10n.formReminderSubtitle),
             value: form.reminderEnabled,
             onChanged: _onReminderToggled,
           ),
@@ -274,7 +281,7 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
               title: Text(
                 form.reminderTime != null
                     ? _formatTime(form.reminderTime!)
-                    : 'Escolher horário',
+                    : l10n.formPickTime,
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
@@ -309,7 +316,7 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.check_rounded),
-            label: Text(isEditing ? 'Salvar alterações' : 'Criar hábito'),
+            label: Text(isEditing ? l10n.formSaveChanges : l10n.formCreate),
           ),
         ],
       ),
@@ -319,6 +326,7 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
   /// A permissão de notificações só é pedida quando se liga um lembrete.
   Future<void> _onReminderToggled(bool enabled) async {
     final notifier = ref.read(habitFormProvider.notifier);
+    final l10n = AppLocalizations.of(context);
     if (!enabled) {
       notifier.updateReminderEnabled(false);
       return;
@@ -329,17 +337,12 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
       context,
       () async => granted =
           await ref.read(notificationServiceProvider).requestPermission(),
-      message: 'Não foi possível pedir permissão para notificações.',
+      message: l10n.errorRequestNotificationPermission,
     );
     if (!mounted) return;
     if (!granted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Sem permissão para notificações. Ativa-a nas definições do '
-            'telemóvel para receberes lembretes.',
-          ),
-        ),
+        SnackBar(content: Text(l10n.notificationPermissionDenied)),
       );
       return;
     }
@@ -357,31 +360,28 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
   /// formulário mostra um aviso (ver _InexactReminderWarning).
   Future<void> _askForExactAlarms() async {
     final service = ref.read(notificationServiceProvider);
+    final l10n = AppLocalizations.of(context);
     var allowed = true;
     await runWithErrorFeedback(
       context,
       () async => allowed = await service.canScheduleExactAlarms(),
-      message: 'Não foi possível verificar a permissão de alarmes.',
+      message: l10n.errorCheckAlarmPermission,
     );
     if (allowed || !mounted) return;
 
     final open = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Lembretes à hora certa'),
-        content: const Text(
-          'Para os lembretes chegarem à hora exata, permite "Alarmes e '
-          'lembretes" nas definições da app. Sem isso, o Android pode '
-          'atrasá-los.',
-        ),
+        title: Text(l10n.exactAlarmTitle),
+        content: Text(l10n.exactAlarmMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Agora não'),
+            child: Text(l10n.actionNotNow),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Abrir definições'),
+            child: Text(l10n.actionOpenSettings),
           ),
         ],
       ),
@@ -398,7 +398,7 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
     await runWithErrorFeedback(
       context,
       () => ref.read(notificationServiceProvider).openExactAlarmSettings(),
-      message: 'Não foi possível abrir as definições.',
+      message: AppLocalizations.of(context).errorOpenSettings,
     );
     if (mounted) ref.invalidate(exactAlarmsAllowedProvider);
   }
@@ -419,11 +419,12 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
         .updateCustomCategory(_customCategoryController.text);
     ref.read(habitFormProvider.notifier).updateUnit(_unitController.text);
 
+    final l10n = AppLocalizations.of(context);
     var ok = false;
     final saved = await runWithErrorFeedback(
       context,
       () async => ok = await ref.read(habitFormProvider.notifier).save(),
-      message: ErrorMessages.saveHabit,
+      message: l10n.errorSaveHabit,
     );
     if (!saved || !mounted) return;
 
@@ -431,18 +432,14 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.habitId != null ? 'Hábito atualizado' : 'Hábito criado',
+            widget.habitId != null ? l10n.formUpdated : l10n.formCreated,
           ),
         ),
       );
       context.pop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Preencha título, categoria e unidade (se quantitativo)',
-          ),
-        ),
+        SnackBar(content: Text(l10n.formValidation)),
       );
     }
   }
@@ -514,6 +511,7 @@ class _InexactReminderWarning extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Card(
       color: theme.colorScheme.errorContainer,
@@ -532,8 +530,7 @@ class _InexactReminderWarning extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Os lembretes podem chegar atrasados: a app não tem '
-                    'permissão para alarmes exatos.',
+                    l10n.exactAlarmWarning,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onErrorContainer,
                     ),
@@ -545,7 +542,7 @@ class _InexactReminderWarning extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: onOpenSettings,
-                child: const Text('Abrir definições'),
+                child: Text(l10n.actionOpenSettings),
               ),
             ),
           ],

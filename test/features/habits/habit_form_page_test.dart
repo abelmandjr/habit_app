@@ -8,6 +8,7 @@ import 'package:habit_app/core/providers/database_provider.dart';
 import 'package:habit_app/features/habits/presentation/pages/habit_form_page.dart';
 
 import '../../helpers/fakes.dart';
+import '../../helpers/test_app.dart';
 
 /// Tarefa 1.10: a permissão de notificações só é pedida ao ligar um lembrete.
 void main() {
@@ -26,7 +27,7 @@ void main() {
           dbProvider.overrideWithValue(db),
           notificationServiceProvider.overrideWithValue(notifications),
         ],
-        child: const MaterialApp(home: HabitFormPage()),
+        child: testApp(const HabitFormPage()),
       ),
     );
     await tester.pumpAndSettle();

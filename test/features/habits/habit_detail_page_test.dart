@@ -10,6 +10,7 @@ import 'package:habit_app/core/utils/date_utils.dart';
 import 'package:habit_app/features/habits/presentation/pages/habit_detail_page.dart';
 
 import '../../helpers/fakes.dart';
+import '../../helpers/test_app.dart';
 
 const _months = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', //
@@ -47,7 +48,7 @@ void main() {
           dbProvider.overrideWithValue(db),
           notificationServiceProvider.overrideWithValue(FakeNotifications()),
         ],
-        child: const MaterialApp(home: HabitDetailPage(habitId: 'h1')),
+        child: testApp(const HabitDetailPage(habitId: 'h1')),
       ),
     );
     await tester.pumpAndSettle();

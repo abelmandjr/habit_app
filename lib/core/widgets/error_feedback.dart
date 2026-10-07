@@ -1,15 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Mensagens de erro mostradas ao utilizador.
-abstract final class ErrorMessages {
-  static const saveLog = 'Não foi possível guardar o registo. Tenta novamente.';
-  static const deleteHabit =
-      'Não foi possível eliminar o hábito. Tenta novamente.';
-  static const saveHabit = 'Não foi possível guardar o hábito. Tenta novamente.';
-  static const saveName = 'Não foi possível guardar o nome. Tenta novamente.';
-  static const loadHabit = 'Não foi possível abrir o hábito.';
-  static const loadData = 'Não foi possível carregar os dados.';
-}
+import '../../l10n/app_localizations.dart';
 
 /// Corre [action] e, se falhar, regista o erro e mostra [message] num SnackBar.
 ///
@@ -41,15 +32,18 @@ class ErrorRetryView extends StatelessWidget {
   const ErrorRetryView({
     super.key,
     required this.onRetry,
-    this.message = ErrorMessages.loadData,
+    this.message,
   });
 
   final VoidCallback onRetry;
-  final String message;
+
+  /// Por omissão: "Não foi possível carregar os dados."
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Center(
       child: Padding(
@@ -64,7 +58,7 @@ class ErrorRetryView extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              message,
+              message ?? l10n.errorLoadData,
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium,
             ),
@@ -72,7 +66,7 @@ class ErrorRetryView extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Tentar de novo'),
+              label: Text(l10n.actionRetry),
             ),
           ],
         ),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../../l10n/app_formats.dart';
 
 class TodaySummaryCard extends StatelessWidget {
   const TodaySummaryCard({
@@ -13,6 +15,7 @@ class TodaySummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final remaining = total - completed;
     final percent = total == 0 ? 0.0 : (completed / total) * 100;
 
@@ -34,7 +37,7 @@ class TodaySummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Atividades de hoje',
+            l10n.todaySummaryTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               color: theme.colorScheme.onPrimary.withValues(alpha: 0.9),
             ),
@@ -43,19 +46,19 @@ class TodaySummaryCard extends StatelessWidget {
           Row(
             children: [
               _StatChip(
-                label: 'Feitas',
+                label: l10n.todayDone,
                 value: '$completed',
                 color: theme.colorScheme.onPrimary,
               ),
               const SizedBox(width: 12),
               _StatChip(
-                label: 'Percentagem',
-                value: '${percent.round()}%',
+                label: l10n.todayPercent,
+                value: AppFormats.percent(percent / 100),
                 color: theme.colorScheme.onPrimary,
               ),
               const SizedBox(width: 12),
               _StatChip(
-                label: 'Faltam',
+                label: l10n.todayRemaining,
                 value: '$remaining',
                 color: theme.colorScheme.onPrimary,
               ),

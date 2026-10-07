@@ -7,6 +7,8 @@ import '../../../../core/widgets/error_feedback.dart';
 import '../providers/habit_provider.dart';
 import '../widgets/habit_log_sheet.dart';
 import '../widgets/habit_report_section.dart';
+import '../../../../l10n/app_formats.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class HabitDetailPage extends ConsumerWidget {
   const HabitDetailPage({super.key, required this.habitId});
@@ -17,10 +19,11 @@ class HabitDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(habitListProvider);
     final detailAsync = ref.watch(habitDetailNotifierProvider(habitId));
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Detalhes'),
+        title: Text(l10n.detailTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_rounded),
@@ -32,18 +35,16 @@ class HabitDetailPage extends ConsumerWidget {
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Excluir hábito?'),
-                    content: const Text(
-                      'Todo o histórico será apagado. Esta ação não pode ser desfeita.',
-                    ),
+                    title: Text(l10n.deleteHabitTitle),
+                    content: Text(l10n.deleteHabitMessageGeneric),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Cancelar'),
+                        child: Text(l10n.actionCancel),
                       ),
                       FilledButton(
                         onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Excluir'),
+                        child: Text(l10n.actionDelete),
                       ),
                     ],
                   ),
@@ -54,16 +55,16 @@ class HabitDetailPage extends ConsumerWidget {
                     () => ref
                         .read(habitListProvider.notifier)
                         .deleteHabit(habitId),
-                    message: ErrorMessages.deleteHabit,
+                    message: l10n.errorDeleteHabit,
                   );
                   if (deleted && context.mounted) context.go('/');
                 }
               }
             },
             itemBuilder: (_) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'delete',
-                child: Text('Excluir hábito'),
+                child: Text(l10n.detailDeleteMenu),
               ),
             ],
           ),
@@ -72,13 +73,13 @@ class HabitDetailPage extends ConsumerWidget {
       body: detailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => ErrorRetryView(
-          message: 'Não foi possível carregar o hábito.',
+          message: l10n.errorLoadHabitDetail,
           onRetry: () =>
               ref.read(habitDetailNotifierProvider(habitId).notifier).refresh(),
         ),
         data: (detail) {
           if (detail == null) {
-            return const Center(child: Text('Hábito não encontrado'));
+            return Center(child: Text(l10n.detailNotFound));
           }
 
           final habit = detail.habit;
@@ -137,14 +138,16 @@ class HabitDetailPage extends ConsumerWidget {
                   Chip(
                     label: Text(
                       type == HabitType.quantitative
-                          ? 'Meta: ${habit.goalValue}$unit/dia'
-                          : 'Sim / Não',
+                          ? l10n.goalPerDay(
+                              AppFormats.quantity(habit.goalValue, unit),
+                            )
+                          : l10n.yesNoTag,
                     ),
                   ),
                   if (habit.reminderEnabled)
-                    const Chip(
-                      avatar: Icon(Icons.notifications_active, size: 16),
-                      label: Text('Lembrete ativo'),
+                    Chip(
+                      avatar: const Icon(Icons.notifications_active, size: 16),
+                      label: Text(l10n.reminderActive),
                     ),
                 ],
               ),
@@ -159,11 +162,11 @@ class HabitDetailPage extends ConsumerWidget {
                 label: Text(
                   type == HabitType.quantitative
                       ? (detail.todayValue != null && detail.todayValue! > 0
-                          ? 'Atualizar registro de hoje'
-                          : 'Registrar valor de hoje')
+                          ? l10n.logUpdateToday
+                          : l10n.logValueToday)
                       : detail.completedToday
-                          ? 'Concluído hoje'
-                          : 'Marcar como feito hoje',
+                          ? l10n.doneToday
+                          : l10n.markDoneToday,
                 ),
               ),
               const SizedBox(height: 24),
