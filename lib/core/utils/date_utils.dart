@@ -43,6 +43,10 @@ class HabitDateUtils {
   static int daysBetween(DateTime from, DateTime to) =>
       calendarDay(to).difference(calendarDay(from)).inDays;
 
+  /// Tempo de [now] até à próxima meia-noite local (início do dia seguinte).
+  static Duration untilNextDay(DateTime now) =>
+      DateTime(now.year, now.month, now.day + 1).difference(now);
+
   /// Meia-noite local de [date], para a UI (calendário, comparações de dias).
   static DateTime startOfDay(DateTime date) =>
       DateTime(date.year, date.month, date.day);

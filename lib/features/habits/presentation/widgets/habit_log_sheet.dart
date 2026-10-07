@@ -239,7 +239,8 @@ class _QuantitativeSheetState extends State<_QuantitativeSheet> {
             controller: _controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              // Vírgula ou ponto decimal (teclados PT mostram vírgula).
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*[.,]?\d*')),
             ],
             autofocus: true,
             decoration: InputDecoration(

@@ -25,7 +25,7 @@
 | 9 | Play Store | **Sim, mais tarde.** É preciso cumprir três requisitos: ter política de privacidade, preencher o formulário "Segurança dos dados" e permitir apagar a conta a partir da app. Por isso a app deixa de usar `USE_EXACT_ALARM` (1.10). |
 | 10 | Novas funcionalidades | **Projetos**: duração ou data de fim, barra "Dia X de N", ecrã de conclusão, arquivar/repetir/tornar permanente, modelos de 21/30/66 dias. **Progresso visual**: anel nos quantitativos, barra nos projetos, mapa de calor anual, anel "X de Y" no dashboard. **Outras**: pausa/modo férias, saltar dia com limite, notas por registo, resumo semanal por notificação, widget Android, conquistas por sequência (7/30/100). |
 
-**Estado do plano:** ✅ **aprovado em 2026-09-24.** A execução segue pela Fase 1 a partir da 1.5.
+**Estado do plano:** ✅ aprovado em 2026-09-24. **Fase 1 concluída** (PRs #1–#3, resumo na secção 10). Antes da Fase 2, ver a secção 11.
 **Testes no dispositivo:** ✅ a 1.1 e a 1.2 foram verificadas em 2026-10-07 num Samsung SM-G986U (Android 13, fuso `Africa/Maputo`), com testes de integração automáticos. Os resultados estão na secção 9.
 **Lembrete:** as dúvidas 5 a 18 da secção 8 são respondidas **no início da Fase 3**.
 
@@ -178,10 +178,10 @@ Tabela chave/valor. Contém `user_name` e `custom_categories` (lista separada po
 ### 🔴 Alta
 | # | Problema | Local | Detalhe |
 |---|---|---|---|
-| A1 | **Lembretes disparam à hora errada** | [notification_service.dart:27](lib/core/notifications/notification_service.dart#L27) | `tz.setLocalLocation(tz.local)` não faz nada, porque `tz.local` é UTC por omissão. Sem obter o fuso real do dispositivo (ex.: `flutter_timezone`), um lembrete às 09:00 toca às 09:00 **UTC**: 10:00 em Lisboa no verão, 06:00 em São Paulo. |
-| A2 | **Swipe para eliminar provoca uma asserção** | [dashboard_page.dart:328](lib/features/dashboard/presentation/pages/dashboard_page.dart#L328), [habit_provider.dart:132-137](lib/features/habits/presentation/providers/habit_provider.dart#L132-L137) | `onDismissed` chama um `deleteHabit` assíncrono que invalida `globalStreakProvider` antes de remover o item da lista. O dashboard é reconstruído com o `Dismissible` já dispensado ainda na árvore, e o Flutter lança "A dismissed Dismissible widget is still part of the tree". É preciso remover o item do estado de forma síncrona (otimista) antes de aguardar a BD. |
+| A1 ✅ | **Lembretes disparam à hora errada** *(resolvido na 1.1)* | [notification_service.dart:27](lib/core/notifications/notification_service.dart#L27) | `tz.setLocalLocation(tz.local)` não faz nada, porque `tz.local` é UTC por omissão. Sem obter o fuso real do dispositivo (ex.: `flutter_timezone`), um lembrete às 09:00 toca às 09:00 **UTC**: 10:00 em Lisboa no verão, 06:00 em São Paulo. |
+| A2 ✅ | **Swipe para eliminar provoca uma asserção** *(resolvido na 1.2 e na 1.3)* | [dashboard_page.dart:328](lib/features/dashboard/presentation/pages/dashboard_page.dart#L328), [habit_provider.dart:132-137](lib/features/habits/presentation/providers/habit_provider.dart#L132-L137) | `onDismissed` chama um `deleteHabit` assíncrono que invalida `globalStreakProvider` antes de remover o item da lista. O dashboard é reconstruído com o `Dismissible` já dispensado ainda na árvore, e o Flutter lança "A dismissed Dismissible widget is still part of the tree". É preciso remover o item do estado de forma síncrona (otimista) antes de aguardar a BD. |
 | A3 ✅ | **Migração a partir da v1 falha** *(resolvido na 1.4)* | [app_database.dart:65-91](lib/core/database/app_database.dart#L65-L91) | Ver o ponto 1 do modelo de dados. Afeta apenas instalações com a BD v1, provavelmente só dispositivos de desenvolvimento. Se a app nunca foi distribuída, basta remover o caminho v1. |
-| A4 | **O único teste falha e não existe cobertura** | [test/widget_test.dart](test/widget_test.dart) | É o teste do template do contador e nem usa `ProviderScope`. A lógica de streaks e estatísticas, que é a parte mais sensível, não tem testes. |
+| A4 ✅ | **O único teste falha e não existe cobertura** *(resolvido na 1.5)* | [test/widget_test.dart](test/widget_test.dart) | É o teste do template do contador e nem usa `ProviderScope`. A lógica de streaks e estatísticas, que é a parte mais sensível, não tem testes. |
 | A5 ✅ | **Erros assíncronos não apanhados na UI** *(corrigido na 1.3)* | [habit_log_sheet.dart:30-33, 48-51](lib/features/habits/presentation/widgets/habit_log_sheet.dart#L30-L51), [habit_provider.dart:93-96](lib/features/habits/presentation/providers/habit_provider.dart#L93-L96), [habit_provider.dart:584](lib/features/habits/presentation/providers/habit_provider.dart#L584), [habit_form_page.dart:326](lib/features/habits/presentation/pages/habit_form_page.dart#L326) | `logHabit` faz `rethrow`. O *sheet* já foi fechado e ninguém apanha o erro. `save()` tem `try/finally` sem `catch`. Qualquer falha na BD ou nas notificações vira uma exceção não tratada, sem feedback para o utilizador. |
 | A6 ✅ | **`CircularDependencyError` ao marcar ou eliminar no dashboard** *(encontrado pelos testes da 1.5, corrigido na 1.12)* | [habit_provider.dart:86](lib/features/habits/presentation/providers/habit_provider.dart#L86), [habit_provider.dart:148](lib/features/habits/presentation/providers/habit_provider.dart#L148) | O `HabitListNotifier` faz `_ref.invalidate(globalStreakProvider)`, mas o `globalStreakProvider` depende do próprio `habitListProvider`. Em debug, o Riverpod lança o erro **depois** de gravar na BD, e o *reload* da lista e do detalhe não chega a correr. Em release a verificação está desligada. Solução: remover as duas invalidações, porque o `globalStreakProvider` já é recalculado quando a lista muda. |
 
@@ -189,11 +189,11 @@ Tabela chave/valor. Contém `user_name` e `custom_categories` (lista separada po
 | # | Problema | Local | Detalhe |
 |---|---|---|---|
 | M1 ✅ | **A taxa de sucesso pode passar de 100 %** *(resolvido na 1.6)* e os "dias falhados" ficam errados | [habit_report_calculator.dart:92-95](lib/core/utils/habit_report_calculator.dart#L92-L95), [streak_calendar.dart:260-261](lib/features/habits/presentation/widgets/streak_calendar.dart#L260-L261) | O calendário permite registar dias **anteriores à criação**. `daysDone` conta esses dias, mas `trackedDays` só conta a partir de `createdAt`. Além disso, o dia de hoje conta como "falhado" antes de terminar. |
-| M2 | **O calendário volta ao mês atual depois de cada edição** | [habit_report_section.dart:93-95, 206-208](lib/features/habits/presentation/widgets/habit_report_section.dart#L93-L95), [habit_detail_page.dart:160](lib/features/habits/presentation/pages/habit_detail_page.dart#L160) | A `ValueKey` usa `Set.hashCode`, que depende da identidade da instância, e as datas concluídas. Cada *refresh* recria o `StreakCalendar`, e o `_displayedMonth` volta a `now`. Isto torna muito incómodo editar meses antigos. |
-| M3 | **O "hoje" fica desatualizado depois da meia-noite** | `habit_provider.dart` (nenhum listener de ciclo de vida) | Se a app ficar aberta ou em *background* a meia-noite passar, o dashboard continua a mostrar o dia anterior até um *pull-to-refresh*. |
+| M2 ✅ | **O calendário volta ao mês atual depois de cada edição** *(resolvido na 1.7)* | [habit_report_section.dart:93-95, 206-208](lib/features/habits/presentation/widgets/habit_report_section.dart#L93-L95), [habit_detail_page.dart:160](lib/features/habits/presentation/pages/habit_detail_page.dart#L160) | A `ValueKey` usa `Set.hashCode`, que depende da identidade da instância, e as datas concluídas. Cada *refresh* recria o `StreakCalendar`, e o `_displayedMonth` volta a `now`. Isto torna muito incómodo editar meses antigos. |
+| M3 ✅ | **O "hoje" fica desatualizado depois da meia-noite** *(resolvido na 1.8)* | `habit_provider.dart` (nenhum listener de ciclo de vida) | Se a app ficar aberta ou em *background* a meia-noite passar, o dashboard continua a mostrar o dia anterior até um *pull-to-refresh*. |
 | M4 | **Desempenho N+1** | [habit_repository_impl.dart:37-56](lib/features/habits/data/repositories/habit_repository_impl.dart#L37-L56), [habit_provider.dart:168-169](lib/features/habits/presentation/providers/habit_provider.dart#L168-L169) | Faz cerca de 6 queries por hábito em cada *reload*, e cada registo faz um *reload*. O `HabitDetailNotifier.refresh` carrega **todos** os hábitos para obter um só. O `globalStreakProvider` é recalculado 2× por ação (invalidate + watch). |
-| M5 | **Não aceita vírgula decimal** | [habit_log_sheet.dart:234](lib/features/habits/presentation/widgets/habit_log_sheet.dart#L234) | O `FilteringTextInputFormatter` só permite `.`. Os teclados em português mostram `,`, e o `replaceAll(',', '.')` nunca chega a atuar. |
-| M6 | **Permissões e política de alarmes** | [notification_service.dart:45-46](lib/core/notifications/notification_service.dart#L45-L46), `AndroidManifest.xml` | Pede permissão de notificações e de alarmes exatos em **cada arranque**, antes de o utilizador ter algum lembrete. `USE_EXACT_ALARM` é reservado a apps de alarme/calendário e pode levar à rejeição na Play Store. Para lembretes, `inexactAllowWhileIdle` costuma bastar. |
+| M5 ✅ | **Não aceita vírgula decimal** *(resolvido na 1.9; afinal gravava o valor truncado, ex.: 1,5 → 1)* | [habit_log_sheet.dart:234](lib/features/habits/presentation/widgets/habit_log_sheet.dart#L234) | O `FilteringTextInputFormatter` só permite `.`. Os teclados em português mostram `,`, e o `replaceAll(',', '.')` nunca chega a atuar. |
+| M6 ✅ | **Permissões e política de alarmes** *(resolvido na 1.10)* | [notification_service.dart:45-46](lib/core/notifications/notification_service.dart#L45-L46), `AndroidManifest.xml` | Pede permissão de notificações e de alarmes exatos em **cada arranque**, antes de o utilizador ter algum lembrete. `USE_EXACT_ALARM` é reservado a apps de alarme/calendário e pode levar à rejeição na Play Store. Para lembretes, `inexactAllowWhileIdle` costuma bastar. |
 | M7 | **Fuga de providers** | [habit_provider.dart:75-77, 140](lib/features/habits/presentation/providers/habit_provider.dart#L75-L77) | `habitDetailNotifierProvider` é um `family` **sem autoDispose**. `logHabit` no dashboard instancia-o para cada hábito tocado, e cada instância faz um `refresh()` completo e fica viva para sempre, mesmo depois de o hábito ser eliminado. |
 | M8 | **Lógica de negócio espalhada e duplicada** | `app_database.dart:189` (`isGoalMet`), `habit_report_calculator.dart:227` (`_isGoalMetSync`), `habit_provider.dart:119, 244` (otimista) | A regra "meta cumprida" está implementada em 4 sítios. A BD contém lógica de domínio (streaks, estatísticas). |
 | M9 ✅ | **Web não funcional** *(resolvido na 1.11: a pasta `web/` foi removida)* | `web/` | O Drift na Web precisa de `sqlite3.wasm` e `drift_worker.js`, e as notificações também não funcionam na Web. Se a Web for um alvo, é preciso configurá-la. Se não for, recomenda-se remover a pasta. |
@@ -262,9 +262,9 @@ A 1.12 vem logo a seguir à 1.5 porque o bug A6 afeta as mesmas funções que a 
 | 1.3 ✅ | Tratamento de erros: `try/catch` no registo e no `save()`, SnackBar de erro, "Tentar de novo" nos estados de erro, lints `unawaited_futures`/`discarded_futures`. *(Concluída em 2026-09-24.* <br>• Helper `runWithErrorFeedback` + `ErrorRetryView` em `core/widgets/error_feedback.dart`. <br>• Registar, eliminar, guardar o hábito, guardar o nome e abrir para editar mostram mensagens em PT-PT. <br>• As atualizações otimistas são desfeitas na lista e no detalhe. <br>• Uma falha dos lembretes já não põe a lista em erro. <br>• Os lints novos estão ativos, com 0 avisos. <br>• Há 5 testes novos em `test/features/error_handling_test.dart`. <br>• Os testes encontraram um problema no *rollback* da 1.2: quando a eliminação falhava depressa, voltava a aparecer "dismissed Dismissible still in tree". A eliminação passou para o `confirmDismiss`.)* | `habit_log_sheet.dart`, `habit_provider.dart`, `habit_form_page.dart`, `dashboard_page.dart`, `analysis_options.yaml` | M | — |
 | 1.4 ✅ | **(simplificada, decisão 11)** Migrações: remover os passos v1–v3. Qualquer BD mais antiga do que a versão base (4) é apagada e recriada (só há dados de desenvolvimento). Ativar `PRAGMA foreign_keys`. O *schema dump* e o `SchemaVerifier` passam para a 3.1. *(Concluída em 2026-10-07, branch `fase-1b`. Há 6 testes novos em `test/core/database/app_database_test.dart`: BD nova, BD v1 recriada, BD v4 mantida ao reabrir, chaves estrangeiras ativas, FK rejeita hábito inexistente, ON DELETE CASCADE. Contra o código antigo, o teste da v1 falha com `Cannot add a column with non-constant default`, o que confirma o bug A3.)* | `app_database.dart`, `test/core/database/` | P | — |
 | 1.6 ✅ | Estatísticas corretas e causa do bug M10. *(Concluída em 2026-10-07, branch `fase-1b`.* <br>• **Data de início:** os registos anteriores ao início (`createdAt`, até à v5) são ignorados nas sequências, nas estatísticas, no streak global e em `getCompletionDates` (que alimenta o streak do tile). O calendário bloqueia os dias antes do início. <br>• **Hoje:** o dia atual por fazer já não conta como falhado, e a taxa só considera os dias avaliados. <br>• **M10:** todas as contas de dias usam `DateTime.utc(ano, mês, dia)` ou chaves `YYYY-MM-DD` (`HabitDateUtils.calendarDay/today/addDays/daysBetween`, `parseKey` em UTC). O streak global percorre os dias por chave. O `daysFromCreation`, que não era usado, foi removido. <br>• **Lembretes:** `NotificationService.nextInstanceOf` avança por campos de calendário em vez de somar 24 h. Antes, na véspera de uma mudança de hora, o lembrete ficava uma hora adiantado ou atrasado. <br>• **Testes:** `dst_test.dart` simula o dispositivo em Lisboa e em Nova Iorque com o pacote `timezone`, sem mudar o fuso do sistema. Os testes de controlo provam que a aritmética antiga falha nesses fusos (meia-noite menos 24 h salta 29/03 em Lisboa; de 08/03 a 15/03 em Nova Iorque `inDays` dá 6; somar 24 h às 09:00 dá 10:00). Os 2 testes do M1 foram reativados e há testes novos para a BD e o calendário. Ficam **55 testes, 0 ignorados**. <br>• **Limite:** numa máquina sem hora de verão, os testes com relógio simulado também passariam com o código antigo, porque este convertia para a hora local do sistema. A garantia vem de o código novo não usar `DateTime` locais nas contas, mais os testes de controlo e a execução da CI com `TZ=Europe/Lisbon`.)* | `date_utils.dart`, `streak_calculator.dart`, `habit_report_calculator.dart`, `app_database.dart`, `notification_service.dart`, `streak_calendar.dart`, `test/` | M | 1.5 |
-| 1.7 ⬜ | O calendário mantém o mês ao editar | `habit_report_section.dart`, `habit_detail_page.dart`, `streak_calendar.dart` | P | — |
-| 1.8 ⬜ | Recarregar ao voltar ao primeiro plano e quando muda o dia | `habit_provider.dart`, `main.dart` | P | — |
-| 1.9 ⬜ | Aceitar vírgula decimal | `habit_log_sheet.dart` | P | — |
+| 1.7 ✅ | O calendário mantém o mês ao editar. *(Concluída em 2026-10-07, branch `fase-1c`. Saíram as `ValueKey` que mudavam a cada atualização (no `HabitReportSection` e nos `StreakCalendar`) e o `calendarDatesKey`, que deixou de ser usado. O calendário reutiliza o mesmo `State` e o `StreakCard` deixa de repetir a animação a cada registo (parte do B10). Há 1 teste novo, `habit_detail_page_test.dart`, que falhava antes da correção.)* | `habit_report_section.dart`, `habit_detail_page.dart`, `habit_provider.dart` | P | — |
+| 1.8 ✅ | Recarregar ao voltar ao primeiro plano e quando muda o dia. *(Concluída em 2026-10-07, branch `fase-1c`. Com a app visível, o `MyApp` tem um `Timer` até depois da meia-noite local (`HabitDateUtils.untilNextDay`), que é cancelado no `onHide` e reagendado no `onShow`. Ao voltar à app, verifica se o dia mudou. Se mudou, a lista recarrega em silêncio e os detalhes são invalidados. Há 3 testes novos em `test/app_day_change_test.dart` (meia-noite com a app aberta, voltar noutro dia e `untilNextDay`); os 2 de widget falhavam antes da correção.)* | `main.dart`, `date_utils.dart` | P | — |
+| 1.9 ✅ | Aceitar vírgula decimal. *(Concluída em 2026-10-07, branch `fase-1c`. O filtro do campo passou para `^\d*[.,]?\d*`. O bug era **pior do que o previsto**: escrever `1,5` **gravava `1.0` sem aviso**, porque o filtro descartava tudo a partir da vírgula. Há 3 testes novos em `habit_log_sheet_test.dart` (`1,5`, `2.25` e um segundo separador ignorado); os de vírgula falhavam antes da correção.)* | `habit_log_sheet.dart` | P | — |
 | 1.10 ✅ | **(opção 1, concluída em 2026-10-07)** Lembretes compatíveis com a Play Store, que funcionam assim: <br>• sai a `USE_EXACT_ALARM` e fica a `SCHEDULE_EXACT_ALARM`; <br>• ao ligar o primeiro lembrete, a app pede `POST_NOTIFICATIONS` e depois, com uma explicação curta, abre "Alarmes e lembretes"; <br>• se for recusado, o lembrete fica em modo inexato e o formulário mostra um aviso com o botão "Abrir definições"; <br>• ao voltar à app (`onShow`), se a permissão mudou, todos os lembretes são reagendados no modo certo. <br>Há 6 testes de widget e foi verificada no dispositivo nos casos permitido, recusado e recusado → permitido (secção 9). *(Histórico: a primeira versão, só com alarmes inexatos, mostrou atrasos inaceitáveis no dispositivo. A janela é 75 % do tempo até ao alarme e a notificação chegou no fim dela. Ver secção 9.)* | `notification_service.dart`, `habit_form_page.dart`, `AndroidManifest.xml` | P | 1.1 |
 | 1.11 ✅ | Remover `web/`, `windows/`, `linux/` e `macos/`. A pasta `ios/` fica intacta. *(Concluída em 2026-10-07, branch `fase-1b`: 63 ficheiros removidos. `flutter build apk --debug`, `analyze` e `test` continuam a passar. As entradas destas plataformas em `.metadata` ficam, porque o ficheiro não deve ser editado à mão e só é usado pelo `flutter migrate`.)* | raiz | P | — |
 
@@ -459,16 +459,17 @@ Os testes de integração estão em `integration_test/`. O teste do fluxo usa um
 
 ### Como correr (forma padrão)
 
-**Regra do projeto: os testes de integração correm sempre com `--no-uninstall`.** Os testes unitários (`flutter test test/`) não precisam de dispositivo e são os que a CI corre.
+**Regra do projeto: os testes de integração correm sempre com `--no-uninstall`.**
+Desde a `fase-1c`, a build de debug usa o pacote **`com.example.habit_app.debug`** e chama-se "habit_app (debug)", por isso convive no telemóvel com a de release (`com.example.habit_app`). Os resultados abaixo, de antes dessa mudança, mostram ainda o nome antigo. Os testes unitários (`flutter test test/`) não precisam de dispositivo e são os que a CI corre.
 
 ```bash
 ADB="$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"
 "$ADB" devices -l                                   # R5CN20X9KPP device model:SM_G986U
-"$ADB" -s R5CN20X9KPP shell pm grant --user 0 com.example.habit_app android.permission.POST_NOTIFICATIONS
+"$ADB" -s R5CN20X9KPP shell pm grant --user 0 com.example.habit_app.debug android.permission.POST_NOTIFICATIONS
 flutter test --no-uninstall integration_test/habit_flow_test.dart          -d R5CN20X9KPP
 flutter test --no-uninstall integration_test/reminder_test.dart            -d R5CN20X9KPP
 # Precisa de orquestração com adb (ver a secção da 1.10 mais abaixo):
-"$ADB" -s R5CN20X9KPP shell appops set com.example.habit_app SCHEDULE_EXACT_ALARM deny
+"$ADB" -s R5CN20X9KPP shell appops set com.example.habit_app.debug SCHEDULE_EXACT_ALARM deny
 flutter test --no-uninstall integration_test/exact_alarm_resume_test.dart  -d R5CN20X9KPP
 ```
 
@@ -536,3 +537,67 @@ Notas:
 - **A reinstalação repõe o appop.** Quando a versão anterior não declarava a permissão, a reinstalação repôs o appop no valor por omissão (concedido no Android 13). O `deny` tem de ser aplicado **depois** de instalada a versão que declara `SCHEDULE_EXACT_ALARM`.
 - **O primeiro `onResume` não reagendou.** Ao voltar à app, o Flutter recebeu `inactive, hidden, paused, hidden, inactive`, sem nunca chegar a `resumed` porque a janela não tinha foco, e o listener com `onResume` não disparou. A app passou a usar **`onShow`** (`hidden` → `inactive`), que não depende do foco. O teste falha se o reagendamento não acontecer.
 - **Revogar a permissão** com a app aberta faz o Android parar a app e cancelar os alarmes exatos. No arranque seguinte, a primeira carga da lista reagenda tudo no modo certo.
+
+### APK de release no dispositivo (2026-10-07, `fase-1c`) ✅
+- **Build:** `flutter build apk --release` gerou `app-release.apk` (59,1 MB, todas as ABIs). O pacote é `com.example.habit_app` e a app chama-se "habit_app". Está assinado com a chave **de debug** do template ("CN=Android Debug"), a substituir na 6.4.
+- **Instalação:** `adb install -r` instalou-o por cima da versão anterior **sem desinstalar**, porque a assinatura é a mesma. A app de debug (`com.example.habit_app.debug`) **convive** com ela.
+- **Verificação automática pela UI** (`uiautomator dump` + `input tap`, sem passos manuais):
+  - a app abre sem erros;
+  - foi criado um hábito "Teste Release" com lembrete às 09:00;
+  - o `dumpsys alarm` mostra `origWhen=2026-10-08 09:00:00.000 window=0 exactAllowReason=permission`, ou seja, o agendamento exato funciona com R8;
+  - o hábito foi eliminado com swipe e o alarme foi cancelado;
+  - não há `E/flutter` nem `FATAL EXCEPTION` no logcat.
+
+---
+
+## 10. Resumo da Fase 1 (concluída com o PR #3)
+
+**Objetivo:** corrigir os bugs críticos e dar ao projeto testes, CI e uma forma de verificar no dispositivo.
+
+| PR | Branch | Tarefas |
+|---|---|---|
+| #1 | `fase-1` | 1.1, 1.2, 1.5, 1.12, 1.3, 1.13, 1.10, testes de integração, documentação |
+| #2 | `fase-1b` | 1.14, 1.4, 1.11, 1.16, 1.15, 1.6 |
+| #3 | `fase-1c` | 1.7, 1.8, 1.9, build de debug com `.debug`, APK de release |
+
+**Bugs resolvidos:**
+- Alta: A1, A2, A3, A4, A5 e A6 (este encontrado pelos testes).
+- Média: M1, M2, M3, M5, M6, M9 e M10 (este encontrado ao preparar os testes).
+
+**Encontrados e corrigidos pelo caminho:**
+- O *rollback* da eliminação podia repetir a asserção do `Dismissible`.
+- Os alarmes inexatos atrasavam os lembretes até 75 % do tempo que faltava.
+- O `onResume` não dispara no dispositivo ao voltar das definições.
+- Os lembretes ficavam uma hora adiantados ou atrasados na véspera de uma mudança de hora.
+- `1,5` era gravado como `1`.
+- Havia um relatório do Gradle versionado e fins de linha inconsistentes.
+
+**Estado no fim da fase:**
+- **Testes unitários:** 62 testes em `test/`, nenhum ignorado. A CI corre-os em Linux e de novo com `TZ=Europe/Lisbon`.
+- **Testes de integração:** 3 em `integration_test/`, a correr com `--no-uninstall`. Foram validados no Samsung SM-G986U (Android 13).
+- **Release:** verificado no dispositivo (ver secção 9).
+- **Plataformas:** só Android. `ios/` está intacto, sem suporte ativo.
+
+**Problemas que passam para as fases seguintes:**
+- **M4** (desempenho N+1), **M7** (fuga de providers) e **M8** (lógica duplicada): resolvem-se na 2.1/2.2.
+- **B1–B8, B10:** limpeza e UI. O B9 fica para a 2.5, porque `ficheiroaa.bat` e `assets/` vazio ainda existem.
+- **Kotlin Gradle Plugin:** o build avisa que o `flutter_timezone` o aplica e que versões futuras do Flutter vão falhar com isso. Fica para a 2.6.
+- **CI:** o `ubuntu-latest` passa para o Ubuntu 26 a partir de 19/10/2026.
+
+---
+
+## 11. A decidir antes da Fase 2
+
+1. **Texto e idioma (2.3).**
+   - Tratar o utilizador por **"tu"** ou por **"você"**? O PT-PT informal usa "tu".
+   - As strings vão já para ficheiros **ARB** (`flutter_localizations`), o que prepara outros idiomas, ou basta uniformizá-las no código por agora? Recomendo **ARB já**: o esforço é parecido e evita mexer em todos os ecrãs duas vezes.
+2. **Tema escuro (2.4).** Seguir o tema do sistema por omissão? E há um seletor (sistema/claro/escuro) já agora? Isso implica criar um ecrã de **Definições**, que ainda não existe e que mais tarde também vai servir para a conta, a exportação e o resumo semanal.
+3. **Camada de domínio (2.1).**
+   - Entidades imutáveis escritas à mão, ou com **`freezed`**? O `freezed` gera `copyWith` e igualdade, mas acrescenta geração de código.
+   - Recomendo **`freezed`**, porque a Fase 3 traz muitas entidades novas.
+4. **Dependências (2.6).** Aceito subir as **versões major** (go_router 18, flutter_local_notifications 22, drift 2.35 + `sqlite3` 3.x, que substitui o `sqlite3_flutter_libs` em fim de vida)? Para o `flutter_timezone`, atualizo se houver versão compatível com o Kotlin incorporado; se não houver, troco-o por outra forma de obter o fuso.
+5. **Runner da CI.** Fixar `ubuntu-24.04`, para a mudança do `ubuntu-latest` não partir a CI sem aviso, ou acompanhar o Ubuntu 26?
+6. **Identidade da app (dúvida 17 da secção 8).** Não é necessária na Fase 2, mas convém decidi-la **antes da Fase 4**: o login Google (4.2) é configurado com o nome do pacote e o SHA-1 da chave.
+7. **Organização dos PRs da Fase 2.** Um PR com as tarefas pequenas (2.3, 2.4, 2.5, 2.7) e outro para a 2.1 + 2.2, que é a refatoração grande? Recomendo assim, para a revisão da refatoração ficar isolada.
+
+> ⏰ Antes da Fase 3 ficam ainda as dúvidas 5 a 18 da secção 8.

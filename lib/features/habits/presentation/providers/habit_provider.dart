@@ -383,13 +383,6 @@ class HabitDetailState {
       yesNoReport?.completionDates ??
       quantitativeReport?.goalMetDates ??
       {};
-
-  String get calendarDatesKey {
-    final done = completionDates.toList()..sort();
-    final logged = (quantitativeReport?.loggedDates ?? completionDates).toList()
-      ..sort();
-    return '${done.join('|')}::${logged.join('|')}';
-  }
 }
 
 final habitFormProvider =

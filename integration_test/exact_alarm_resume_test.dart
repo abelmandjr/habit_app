@@ -14,7 +14,7 @@ import 'package:integration_test/integration_test.dart';
 /// os lembretes são reagendados em modo exato.
 ///
 /// É orquestrado por fora, com adb (ver ANALISE_PROJETO.md §9):
-///   1. antes: `appops set com.example.habit_app SCHEDULE_EXACT_ALARM deny`
+///   1. antes: `appops set com.example.habit_app.debug SCHEDULE_EXACT_ALARM deny`
 ///   2. com `IT_RESUME ready`: `dumpsys alarm` (inexato), `appops ... allow`,
 ///      tecla HOME e `am start` (volta à app), `dumpsys alarm` (exato)
 /// O teste espera até a permissão estar concedida e a app ter voltado.

@@ -15,6 +15,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["appLabel"] = "habit_app"
     }
 
     compileOptions {
@@ -24,6 +25,12 @@ android {
     }
 
     buildTypes {
+        // A app de debug (com.example.habit_app.debug) convive no telemóvel
+        // com a de release (com.example.habit_app).
+        debug {
+            applicationIdSuffix = ".debug"
+            manifestPlaceholders["appLabel"] = "habit_app (debug)"
+        }
         release {
             signingConfig = signingConfigs.getByName("debug")
         }
