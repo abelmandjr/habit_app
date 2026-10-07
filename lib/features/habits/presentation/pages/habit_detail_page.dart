@@ -168,9 +168,6 @@ class HabitDetailPage extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               HabitReportSection(
-                key: ValueKey(
-                  '${detail.completedToday}_${detail.calendarDatesKey}',
-                ),
                 type: type,
                 unit: unit,
                 goalValue: habit.goalValue,
