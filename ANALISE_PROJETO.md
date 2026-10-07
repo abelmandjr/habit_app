@@ -18,6 +18,13 @@
 | 3 | Migrações | A app nunca foi distribuída. O schema atual (v4) passa a ser a base (1.4) e todas as alterações novas ao modelo entram numa **única migração v5** (secção 7). |
 | 4 | Dados | **Mudou: os dados passam a ser guardados online.** A arquitetura é **offline-first**: o Drift continua a ser a base local, a app funciona sem rede e sincroniza quando há rede. A sincronização e o login deixam de estar adiados e passam à Fase 4. **Backend: Supabase.** **Login: só Google** (o e-mail pode vir mais tarde). **A conta é obrigatória** desde o onboarding, por isso não há modo sem conta. |
 | 11 | Dados de desenvolvimento | Os dados atuais do telemóvel podem ser apagados. **A v5 começa como base limpa**, sem migração de dados a partir da v4. |
+| 12 | Texto | O utilizador é tratado por **"tu"**. As strings passam para **ARB** (`flutter_localizations`) **antes da Fase 3**, para que os textos novos já sejam criados em ARB. |
+| 13 | Tema e Definições | O tema escuro e o ecrã de Definições ficam **para depois da Fase 3**. As Definições entram na Fase 4, junto com a conta. |
+| 14 | Domínio | As entidades da camada de domínio usam **`freezed`**. |
+| 15 | Dependências | Subir já o **go_router** e o **flutter_local_notifications** para as versões major mais recentes. O **Riverpod 2** mantém-se. O `flutter_timezone` passa a uma versão sem o problema do Kotlin Gradle Plugin, ou é trocado por uma alternativa mantida. |
+| 16 | CI | Runner fixo em **`ubuntu-24.04`**, antes de 19/10. |
+| 17 | Identidade | Pacote **`com.abelmandjr.habitapp`** (debug: `com.abelmandjr.habitapp.debug`). Nome visível: **"Hábitos"**. |
+| 18 | Processo | **Um PR por tarefa.** Faço o merge de cada um quando a CI passa, ao abrigo da autorização permanente (merge commit, CI e testes locais verdes, resumo enviado antes). |
 | 5 | Idioma | **Português de Portugal (PT-PT)** em todos os textos. |
 | 6 | Frequência | "Dias específicos da semana" e "X vezes por semana". **Os dias não programados não quebram o streak.** |
 | 7 | Data de início | Passa a ser editável e os registos anteriores a ela são ignorados. |
@@ -25,7 +32,7 @@
 | 9 | Play Store | **Sim, mais tarde.** É preciso cumprir três requisitos: ter política de privacidade, preencher o formulário "Segurança dos dados" e permitir apagar a conta a partir da app. Por isso a app deixa de usar `USE_EXACT_ALARM` (1.10). |
 | 10 | Novas funcionalidades | **Projetos**: duração ou data de fim, barra "Dia X de N", ecrã de conclusão, arquivar/repetir/tornar permanente, modelos de 21/30/66 dias. **Progresso visual**: anel nos quantitativos, barra nos projetos, mapa de calor anual, anel "X de Y" no dashboard. **Outras**: pausa/modo férias, saltar dia com limite, notas por registo, resumo semanal por notificação, widget Android, conquistas por sequência (7/30/100). |
 
-**Estado do plano:** ✅ aprovado em 2026-09-24. **Fase 1 concluída** (PRs #1–#3, resumo na secção 10). Antes da Fase 2, ver a secção 11.
+**Estado do plano:** ✅ aprovado em 2026-09-24. **Fase 1 concluída** (PRs #1–#3, resumo na secção 10). As decisões da secção 11 foram tomadas a 2026-10-07 (decisões 12 a 18) e a **Fase 2 foi reduzida** ao que a Fase 3 precisa.
 **Testes no dispositivo:** ✅ a 1.1 e a 1.2 foram verificadas em 2026-10-07 num Samsung SM-G986U (Android 13, fuso `Africa/Maputo`), com testes de integração automáticos. Os resultados estão na secção 9.
 **Lembrete:** as dúvidas 5 a 18 da secção 8 são respondidas **no início da Fase 3**.
 
@@ -268,18 +275,26 @@ A 1.12 vem logo a seguir à 1.5 porque o bug A6 afeta as mesmas funções que a 
 | 1.10 ✅ | **(opção 1, concluída em 2026-10-07)** Lembretes compatíveis com a Play Store, que funcionam assim: <br>• sai a `USE_EXACT_ALARM` e fica a `SCHEDULE_EXACT_ALARM`; <br>• ao ligar o primeiro lembrete, a app pede `POST_NOTIFICATIONS` e depois, com uma explicação curta, abre "Alarmes e lembretes"; <br>• se for recusado, o lembrete fica em modo inexato e o formulário mostra um aviso com o botão "Abrir definições"; <br>• ao voltar à app (`onShow`), se a permissão mudou, todos os lembretes são reagendados no modo certo. <br>Há 6 testes de widget e foi verificada no dispositivo nos casos permitido, recusado e recusado → permitido (secção 9). *(Histórico: a primeira versão, só com alarmes inexatos, mostrou atrasos inaceitáveis no dispositivo. A janela é 75 % do tempo até ao alarme e a notificação chegou no fim dela. Ver secção 9.)* | `notification_service.dart`, `habit_form_page.dart`, `AndroidManifest.xml` | P | 1.1 |
 | 1.11 ✅ | Remover `web/`, `windows/`, `linux/` e `macos/`. A pasta `ios/` fica intacta. *(Concluída em 2026-10-07, branch `fase-1b`: 63 ficheiros removidos. `flutter build apk --debug`, `analyze` e `test` continuam a passar. As entradas destas plataformas em `.metadata` ficam, porque o ficheiro não deve ser editado à mão e só é usado pelo `flutter migrate`.)* | raiz | P | — |
 
-### Fase 2: fundações
-Prepara o código para o modelo novo e para a nuvem.
+### Fase 2: fundações (só o que a Fase 3 precisa)
+Reorganizada a 2026-10-07. **Ordem de execução:** 2.8 → 2.9 → 2.6 → 2.3 → 2.1 → 2.2. Cada tarefa tem o seu PR (decisão 18).
 
-| # | Tarefa | Origem | Esforço | Depende de |
-|---|---|---|---|---|
-| 2.1 | **Camada de domínio**: entidades próprias (`Habit`, `HabitLog`…) separadas das classes do Drift, repositórios com interface (necessários para combinar a fonte local com a remota), uma única regra de "meta cumprida", dividir `habit_provider.dart` e usar `autoDispose` no detalhe | antes 2.1 | G | 1.5 |
-| 2.2 | **Streams do Drift** (`watch()`) e queries agregadas em vez de N+1. Os ecrãs passam a atualizar-se sozinhos, o que é indispensável quando a sincronização altera dados em segundo plano. | antes 2.2 | M | 2.1 |
-| 2.3 | Textos em PT-PT + ARB + `intl` (`pt_PT`) | antes 2.7 | M | — |
-| 2.4 | Tema escuro + tokens de cor (base para as cores por hábito e para os componentes visuais da Fase 5) | antes 2.3 | M | — |
-| 2.5 | Limpeza: dependências não usadas, código morto, `ficheiroaa.bat`, `assets/` vazio. A identidade da app passa para a 6.1 e a coluna `isCompleted` sai na migração 3.1. | antes 2.8 | P | — |
-| 2.6 | Atualizar dependências antes de juntar os SDKs do backend (Riverpod 2 mantém-se) | antes 2.10 | M | 1.5 |
-| 2.7 | Persistir as preferências da lista | antes 2.5 | P | — |
+| # | Tarefa | Esforço | Depende de |
+|---|---|---|---|
+| 2.8 ✅ | **(nova, decisão 16)** CI com o runner fixo em `ubuntu-24.04`. *(Concluída em 2026-10-07.)* | P | — |
+| 2.9 ⬜ | **(nova, decisão 17)** Identidade: `applicationId` `com.abelmandjr.habitapp` (+ `.debug`), `namespace` e pacote Kotlin do `MainActivity`, nome visível "Hábitos". Feita já porque custa meio dia, evita reinstalar a app mais tarde e o login Google (4.2) é configurado com o nome do pacote. | P | — |
+| 2.6 ⬜ | Dependências (decisão 15): go_router e flutter_local_notifications para a versão major mais recente, `flutter_timezone` sem o Kotlin Gradle Plugin (ou alternativa mantida), Riverpod 2 mantido. Inclui **remover as dependências não usadas** (`google_fonts`, `cupertino_icons`, `path_provider` se continuar sem uso), que vinha da 2.5. | M | 1.5 |
+| 2.3 ⬜ | ARB (`flutter_localizations` + `intl` `pt_PT`) e textos uniformizados em PT-PT com **"tu"** (decisão 12). Centraliza datas e números. | M | — |
+| 2.1 ⬜ | **Camada de domínio** com `freezed` (decisão 14): entidades próprias separadas das classes do Drift, repositórios com interface, uma única regra de "meta cumprida", `habit_provider.dart` dividido, `autoDispose` no detalhe. Resolve o M7 e o M8. | G | 1.5 |
+| 2.2 ⬜ | **Streams do Drift** (`watch()`) e queries agregadas em vez de N+1 (M4). | M | 2.1 |
+
+**Estimativa até ao início da Fase 3:** cerca de **8 a 12 dias úteis** (2.8: 0,1 · 2.9: 0,5 · 2.6: 1–2 · 2.3: 2 · 2.1: 3–5 · 2.2: 1–2).
+
+### Fase 2b: depois da Fase 3
+| # | Tarefa | Esforço | Depende de |
+|---|---|---|---|
+| 2.5 | Restante limpeza: código morto, `ficheiroaa.bat`, `assets/` vazio (B4, B9) | P | — |
+| 2.7 | Persistir as preferências da lista | P | — |
+| ~~2.4~~ | Tema escuro: passa para a **4.8** (decisão 13) | — | — |
 
 ### Fase 3: modelo v5 e regras
 | # | Tarefa | Esforço | Depende de |
@@ -291,7 +306,7 @@ Prepara o código para o modelo novo e para a nuvem.
 | 3.5 | **Pausa / modo férias**: pausar um hábito ou todos, com data de fim opcional. Os dias em pausa não contam para o streak e os lembretes ficam silenciados. | M | 3.2 |
 | 3.6 | **Saltar dia com limite** (ex.: 1 por semana): ação no registo do dia e contador de saltos disponíveis. Um dia saltado não quebra nem soma ao streak. | M | 3.2 |
 | 3.7 | **Notas** opcionais em cada registo (sheet de registo, calendário e detalhe) | P | 3.1 |
-| 3.8 | **Cor e ícone** por hábito (seletor, e uso no tile, no detalhe e nos gráficos) | M | 3.1, 2.4 |
+| 3.8 | **Cor e ícone** por hábito (seletor, e uso no tile, no detalhe e nos gráficos). Como o tema escuro passou para a 4.8, a paleta de cores dos hábitos é definida **já com variantes clara e escura**, para não ser refeita depois. | M | 3.1 |
 | 3.9 | Categorias numa tabela própria: renomear, apagar e filtrar (antes 2.4) | M | 3.1 |
 | 3.10 | Lembretes só nos dias programados e fora das pausas. Tocar na notificação abre o hábito e não há lembrete se o hábito já estiver feito (antes 2.6). | M | 3.2, 3.5, 1.10 |
 
@@ -305,6 +320,7 @@ Prepara o código para o modelo novo e para a nuvem.
 | 4.5 | **Apagar a conta a partir da app** (requisito da Play Store): dupla confirmação, depois apaga os dados remotos e a conta de autenticação (função no servidor) e por fim os dados locais. A Play Store também exige uma **página web** para pedir a eliminação. | M | 4.2 |
 | 4.6 | Onboarding: boas-vindas, **login Google obrigatório** (o `go_router` redireciona para o login quando não há sessão), nome, primeiro hábito (com modelos) e permissão de notificações no momento certo (antes 3.4) | M | 4.2, 1.10 |
 | 4.7 | Exportar/importar JSON local ⏳. Com a nuvem torna-se opcional e serve para portabilidade dos dados (antes 3.5). | M | 2.1, dúvida 5 |
+| 4.8 | **(antes 2.4, decisão 13)** Ecrã de **Definições** (conta, tema, lembretes) e **tema escuro** com tokens de cor (sistema/claro/escuro) | M | 4.2 |
 
 ### Fase 5: projetos, progresso visual e motivação
 | # | Tarefa | Esforço | Depende de |
@@ -406,6 +422,8 @@ Guarda o que é do dispositivo e não sincroniza: tema, preferências da lista, 
 ## 8. Dúvidas em aberto
 
 > ⏰ **Lembrete: responder às dúvidas 5 a 18 no início da Fase 3**, antes da tarefa 3.1.
+>
+> 2026-10-07: enviadas as recomendações para as dúvidas 5 a 18, à espera de resposta. **A 17 está respondida** (decisão 17) e **a 19 também** (1.1 verificada no dispositivo, secção 9). Recomendações: 5 não · 6 por hábito, 1/semana, seg–dom, sem acumular · 7 ambas, registos permitidos sem contar · 8 semanas cumpridas, conquistas 4/12/52 semanas · 9 ciclo novo ligado ao anterior · 10 sim · 11 não, só estatísticas · 12 ambas · 13 domingo 20:00 · 14 só visualização · 15 Sentry · 16 GitHub Pages · 18 depende da conta.
 
 **Respondidas em 2026-09-24:** 1. Supabase · 2. Só Google · 3. Conta obrigatória · 4. Os dados de desenvolvimento podem ser apagados. A v5 começa como base limpa (ver a secção 0).
 
@@ -587,6 +605,8 @@ Notas:
 ---
 
 ## 11. A decidir antes da Fase 2
+
+> ✅ Respondido a 2026-10-07: decisões 12 a 18 da secção 0. O roadmap da Fase 2 foi reorganizado (secção 6).
 
 1. **Texto e idioma (2.3).**
    - Tratar o utilizador por **"tu"** ou por **"você"**? O PT-PT informal usa "tu".
