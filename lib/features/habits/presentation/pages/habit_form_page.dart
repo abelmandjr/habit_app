@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/habit_type.dart';
 import '../../../../core/storage/user_settings_service.dart';
+import '../../../../core/widgets/error_feedback.dart';
 import '../providers/habit_provider.dart';
 
 class HabitFormPage extends ConsumerStatefulWidget {
@@ -32,10 +35,20 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
     _unitController = TextEditingController();
 
     if (widget.habitId != null) {
-      Future.microtask(() async {
-        await ref.read(habitFormProvider.notifier).loadForEdit(widget.habitId!);
-        _syncControllers();
-      });
+      unawaited(Future.microtask(() async {
+        if (!mounted) return;
+        final loaded = await runWithErrorFeedback(
+          context,
+          () => ref.read(habitFormProvider.notifier).loadForEdit(widget.habitId!),
+          message: ErrorMessages.loadHabit,
+        );
+        if (!mounted) return;
+        if (loaded) {
+          _syncControllers();
+        } else {
+          context.pop();
+        }
+      }));
     }
   }
 
@@ -323,8 +336,13 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
         .updateCustomCategory(_customCategoryController.text);
     ref.read(habitFormProvider.notifier).updateUnit(_unitController.text);
 
-    final ok = await ref.read(habitFormProvider.notifier).save();
-    if (!mounted) return;
+    var ok = false;
+    final saved = await runWithErrorFeedback(
+      context,
+      () async => ok = await ref.read(habitFormProvider.notifier).save(),
+      message: ErrorMessages.saveHabit,
+    );
+    if (!saved || !mounted) return;
 
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(

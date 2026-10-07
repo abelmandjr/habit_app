@@ -8,11 +8,7 @@ import 'package:habit_app/core/providers/database_provider.dart';
 import 'package:habit_app/core/utils/date_utils.dart';
 import 'package:habit_app/features/dashboard/presentation/pages/dashboard_page.dart';
 
-/// Evita chamadas ao plugin nativo de notificações nos testes.
-class _FakeNotifications implements NotificationService {
-  @override
-  dynamic noSuchMethod(Invocation invocation) => Future<void>.value();
-}
+import '../../helpers/fakes.dart';
 
 void main() {
   late AppDatabase db;
@@ -25,7 +21,7 @@ void main() {
       ProviderScope(
         overrides: [
           dbProvider.overrideWithValue(db),
-          notificationServiceProvider.overrideWithValue(_FakeNotifications()),
+          notificationServiceProvider.overrideWithValue(FakeNotifications()),
         ],
         child: const MaterialApp(home: DashboardPage()),
       ),

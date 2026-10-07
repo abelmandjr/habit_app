@@ -13,6 +13,7 @@ import '../../../habits/presentation/widgets/habit_today_tile.dart';
 import '../../../habits/presentation/widgets/global_streak_banner.dart';
 import '../../../habits/presentation/widgets/today_summary_card.dart';
 import '../../../../core/storage/user_settings_service.dart';
+import '../../../../core/widgets/error_feedback.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -139,9 +140,13 @@ class DashboardPage extends ConsumerWidget {
                                 ref: ref,
                                 onDetails: () =>
                                     context.push('/habits/${item.habit.id}'),
-                                onDelete: () => ref
-                                    .read(habitListProvider.notifier)
-                                    .deleteHabit(item.habit.id),
+                                onDelete: () => runWithErrorFeedback(
+                                  context,
+                                  () => ref
+                                      .read(habitListProvider.notifier)
+                                      .deleteHabit(item.habit.id),
+                                  message: ErrorMessages.deleteHabit,
+                                ),
                               )),
                       ],
                     ]),
@@ -152,7 +157,10 @@ class DashboardPage extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Erro: $error')),
+        error: (_, _) => ErrorRetryView(
+          message: 'Não foi possível carregar os hábitos.',
+          onRetry: () => ref.read(habitListProvider.notifier).load(),
+        ),
       ),
     );
   }
@@ -228,7 +236,12 @@ class DashboardPage extends ConsumerWidget {
       ),
     );
     if (result != null) {
-      await ref.read(userNameProvider.notifier).setName(result);
+      if (!context.mounted) return;
+      await runWithErrorFeedback(
+        context,
+        () => ref.read(userNameProvider.notifier).setName(result),
+        message: ErrorMessages.saveName,
+      );
     }
   }
 }
@@ -285,7 +298,9 @@ class _DismissibleHabitCard extends StatelessWidget {
   final HabitWithToday item;
   final WidgetRef ref;
   final VoidCallback onDetails;
-  final VoidCallback onDelete;
+
+  /// Elimina o hábito e devolve `true` se correu bem.
+  final Future<bool> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -303,8 +318,11 @@ class _DismissibleHabitCard extends StatelessWidget {
           ),
           child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
         ),
+        // A eliminação corre aqui e não no onDismissed: o cartão só é dado
+        // como dispensado se a eliminação resultar. Se falhar, volta ao lugar
+        // (evita "dismissed Dismissible still in tree" no rollback).
         confirmDismiss: (_) async {
-          return await showDialog<bool>(
+          final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
                   title: const Text('Excluir hábito?'),
@@ -324,15 +342,20 @@ class _DismissibleHabitCard extends StatelessWidget {
                 ),
               ) ??
               false;
+          if (!confirmed) return false;
+          return onDelete();
         },
-        onDismissed: (_) => onDelete(),
         child: HabitTodayTile(
           item: item,
           onTap: onDetails,
           onToggle: item.type == HabitType.yesNo
-              ? () => ref.read(habitListProvider.notifier).logHabit(
-                    item,
-                    yesNo: !item.completedToday,
+              ? () => runWithErrorFeedback(
+                    context,
+                    () => ref.read(habitListProvider.notifier).logHabit(
+                          item,
+                          yesNo: !item.completedToday,
+                        ),
+                    message: ErrorMessages.saveLog,
                   )
               : null,
           onQuickLog: () => showHabitLogSheet(

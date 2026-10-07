@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../database/app_database.dart';
@@ -22,13 +25,17 @@ final userNameProvider = StateNotifierProvider<UserNameNotifier, String>(
 
 class UserNameNotifier extends StateNotifier<String> {
   UserNameNotifier(this._service) : super('') {
-    _load();
+    unawaited(_load());
   }
 
   final UserSettingsService _service;
 
   Future<void> _load() async {
-    state = await _service.getUserName();
+    try {
+      state = await _service.getUserName();
+    } catch (e) {
+      debugPrint('Falha ao carregar o nome: $e');
+    }
   }
 
   Future<void> setName(String name) async {
@@ -45,13 +52,18 @@ final categoriesProvider =
 
 class CategoriesNotifier extends StateNotifier<List<String>> {
   CategoriesNotifier(this._service) : super(defaultCategories) {
-    _load();
+    unawaited(_load());
   }
 
   final UserSettingsService _service;
 
+  /// Se falhar, ficam as categorias predefinidas.
   Future<void> _load() async {
-    state = await _service.getAllCategories();
+    try {
+      state = await _service.getAllCategories();
+    } catch (e) {
+      debugPrint('Falha ao carregar categorias: $e');
+    }
   }
 
   Future<void> reload() async {

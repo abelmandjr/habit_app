@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/models/habit_type.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/widgets/error_feedback.dart';
 import '../../data/repositories/habit_repository_impl.dart';
 
 /// Bottom sheet para registar hábito (hoje ou data passada).
@@ -19,6 +20,13 @@ Future<void> showHabitLogSheet({
   final completed = completedOnDate ?? (isToday ? item.completedToday : false);
   final value = valueOnDate ?? (isToday ? item.todayValue : null);
 
+  // O sheet fecha antes de gravar; os erros aparecem no ecrã de origem.
+  Future<void> submit(bool? yesNo, double? quantity) => runWithErrorFeedback(
+        context,
+        () => onSubmit(yesNo, quantity),
+        message: ErrorMessages.saveLog,
+      );
+
   if (item.type == HabitType.yesNo) {
     return showModalBottomSheet(
       context: context,
@@ -29,7 +37,7 @@ Future<void> showHabitLogSheet({
         completedOnDate: completed,
         onSelect: (done) async {
           Navigator.pop(ctx);
-          await onSubmit(done, null);
+          await submit(done, null);
         },
       ),
     );
@@ -47,7 +55,7 @@ Future<void> showHabitLogSheet({
       currentValue: value,
       onSubmit: (v) async {
         Navigator.pop(ctx);
-        await onSubmit(null, v);
+        await submit(null, v);
       },
     ),
   );

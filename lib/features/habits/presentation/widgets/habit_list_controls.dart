@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -38,7 +40,7 @@ class HabitListControls extends ConsumerWidget {
     WidgetRef ref,
     HabitSortOption current,
   ) {
-    showModalBottomSheet(
+    unawaited(showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
@@ -74,6 +76,6 @@ class HabitListControls extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 }
