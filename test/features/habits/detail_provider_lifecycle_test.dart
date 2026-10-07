@@ -1,4 +1,3 @@
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +10,7 @@ import 'package:habit_app/features/habits/presentation/providers/habit_provider.
 
 import '../../helpers/fakes.dart';
 import '../../helpers/test_app.dart';
+import '../../helpers/fixtures.dart';
 
 /// Tarefa 2.1d (bug M7): o estado do ecrã de detalhe só existe enquanto o
 /// ecrã está aberto.
@@ -19,7 +19,7 @@ void main() {
   late ProviderContainer container;
 
   setUp(() {
-    db = AppDatabase(NativeDatabase.memory());
+    db = memoryDatabase();
     container = ProviderContainer(
       overrides: [
         dbProvider.overrideWithValue(db),

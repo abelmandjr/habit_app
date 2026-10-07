@@ -129,6 +129,19 @@ class AppDatabase extends _$AppDatabase {
   Future<List<HabitCompletion>> getAllCompletions() =>
       select(habitCompletions).get();
 
+  // Streams: emitem de novo sempre que as tabelas lidas mudam (tarefa 2.2).
+  Stream<List<HabitData>> watchAllHabits() => select(habits).watch();
+
+  Stream<HabitData?> watchHabitById(String id) =>
+      (select(habits)..where((t) => t.id.equals(id))).watchSingleOrNull();
+
+  Stream<List<HabitCompletion>> watchAllCompletions() =>
+      select(habitCompletions).watch();
+
+  Stream<List<HabitCompletion>> watchCompletionsForHabit(String habitId) =>
+      (select(habitCompletions)..where((t) => t.habitId.equals(habitId)))
+          .watch();
+
   /// Registo de [habitId] no dia [date]. Se houver duplicados (de versões
   /// antigas), fica o mais recente e os restantes são apagados.
   Future<HabitCompletion?> getCompletion(String habitId, String date) async {

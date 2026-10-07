@@ -15,6 +15,15 @@ class DriftHabitRepository implements HabitRepository {
       [for (final row in await _db.getAllHabits()) row.toEntity()];
 
   @override
+  Stream<List<Habit>> watchHabits() => _db.watchAllHabits().map(
+        (rows) => [for (final row in rows) row.toEntity()],
+      );
+
+  @override
+  Stream<Habit?> watchHabit(String id) =>
+      _db.watchHabitById(id).map((row) => row?.toEntity());
+
+  @override
   Future<Habit?> getHabit(String id) async =>
       (await _db.getHabitById(id))?.toEntity();
 
@@ -36,6 +45,17 @@ class DriftHabitRepository implements HabitRepository {
   @override
   Future<List<HabitLog>> getAllLogs() async =>
       [for (final row in await _db.getAllCompletions()) row.toEntity()];
+
+  @override
+  Stream<List<HabitLog>> watchAllLogs() => _db.watchAllCompletions().map(
+        (rows) => [for (final row in rows) row.toEntity()],
+      );
+
+  @override
+  Stream<List<HabitLog>> watchLogs(String habitId) =>
+      _db.watchCompletionsForHabit(habitId).map(
+            (rows) => [for (final row in rows) row.toEntity()],
+          );
 
   @override
   Future<HabitLog?> getLog(String habitId, String date) async =>

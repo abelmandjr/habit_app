@@ -1,4 +1,3 @@
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,12 +8,13 @@ import 'package:habit_app/features/habits/presentation/pages/habit_form_page.dar
 
 import '../../helpers/fakes.dart';
 import '../../helpers/test_app.dart';
+import '../../helpers/fixtures.dart';
 
 /// Tarefa 1.10: a permissão de notificações só é pedida ao ligar um lembrete.
 void main() {
   late AppDatabase db;
 
-  setUp(() => db = AppDatabase(NativeDatabase.memory()));
+  setUp(() => db = memoryDatabase());
   tearDown(() => db.close());
 
   Future<void> openReminderSwitch(

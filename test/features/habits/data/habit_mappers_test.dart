@@ -1,10 +1,10 @@
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:habit_app/core/database/app_database.dart';
 import 'package:habit_app/core/models/habit_type.dart';
 import 'package:habit_app/features/habits/data/mappers/habit_mappers.dart';
 import 'package:habit_app/features/habits/domain/entities/habit.dart';
 import 'package:habit_app/features/habits/domain/entities/habit_log.dart';
+import '../../../helpers/fixtures.dart';
 
 /// Tarefa 2.1a: conversões entre as classes do Drift e as entidades.
 void main() {
@@ -58,7 +58,7 @@ void main() {
     });
 
     test('toCompanion insere na BD e volta igual', () async {
-      final db = AppDatabase(NativeDatabase.memory());
+      final db = memoryDatabase();
       addTearDown(db.close);
 
       await db.insertHabit(quantitative.toCompanion());
@@ -70,7 +70,7 @@ void main() {
 
   group('HabitLog', () {
     test('toCompanion e toEntity fazem o caminho de ida e volta pela BD', () async {
-      final db = AppDatabase(NativeDatabase.memory());
+      final db = memoryDatabase();
       addTearDown(db.close);
       await db.insertHabit(quantitative.toCompanion());
 

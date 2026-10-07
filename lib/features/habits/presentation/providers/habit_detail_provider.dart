@@ -35,11 +35,25 @@ HabitDetailNotifier? openHabitDetail(Ref ref, String habitId) {
 
 class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
   HabitDetailNotifier(this._ref, this._habitId) : super(const AsyncLoading()) {
-    unawaited(refresh());
+    // A primeira emissão faz a carga inicial; as seguintes chegam quando o
+    // hábito ou os seus registos mudam na BD, venham de onde vierem (2.2).
+    _subscription = _queries.watchHabitChanges(_habitId).listen(
+          (_) => unawaited(refresh()),
+          onError: (Object e, StackTrace st) {
+            if (mounted) state = AsyncError(e, st);
+          },
+        );
   }
 
   final Ref _ref;
   final String _habitId;
+  late final StreamSubscription<void> _subscription;
+
+  @override
+  void dispose() {
+    unawaited(_subscription.cancel());
+    super.dispose();
+  }
 
   HabitRepository get _repo => _ref.read(habitRepositoryProvider);
   HabitQueries get _queries => _ref.read(habitQueriesProvider);

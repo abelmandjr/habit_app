@@ -1,3 +1,4 @@
+import '../../../../core/utils/combine_latest.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../entities/habit.dart';
 import '../entities/habit_log.dart';
@@ -13,11 +14,33 @@ class HabitQueries {
 
   final HabitRepository _repository;
 
-  Future<List<HabitWithToday>> getHabitsWithTodayStatus() async {
-    final habits = await _repository.getHabits();
-    final logsByHabit = _byHabit(await _repository.getAllLogs());
-    final today = HabitDateUtils.todayKey();
+  Future<List<HabitWithToday>> getHabitsWithTodayStatus() async =>
+      _listWithToday(
+        await _repository.getHabits(),
+        await _repository.getAllLogs(),
+      );
 
+  /// Como [getHabitsWithTodayStatus], mas emite de novo sempre que os hábitos
+  /// ou os registos mudam na BD (tarefa 2.2).
+  Stream<List<HabitWithToday>> watchHabitsWithTodayStatus() => combineLatest2(
+        _repository.watchHabits(),
+        _repository.watchAllLogs(),
+        _listWithToday,
+      );
+
+  /// Emite sempre que o hábito [habitId] ou os seus registos mudam.
+  Stream<void> watchHabitChanges(String habitId) => combineLatest2(
+        _repository.watchHabit(habitId),
+        _repository.watchLogs(habitId),
+        (_, _) {},
+      );
+
+  List<HabitWithToday> _listWithToday(
+    List<Habit> habits,
+    List<HabitLog> allLogs,
+  ) {
+    final logsByHabit = _byHabit(allLogs);
+    final today = HabitDateUtils.todayKey();
     return [
       for (final habit in habits)
         _withToday(habit, logsByHabit[habit.id] ?? const [], today),
