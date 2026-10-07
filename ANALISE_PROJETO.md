@@ -8,7 +8,7 @@
 
 ## 0. Decisões tomadas
 
-> Última atualização: 2026-09-24 (2.ª ronda de decisões). ⏳ = ainda por confirmar.
+> Última atualização: 2026-10-07 (respostas às dúvidas 5 a 18 e mudança da distribuição: sem Play Store). ⏳ = ainda por confirmar.
 > As secções 1 a 5 descrevem o código no commit `f6254ad`. As secções 6 a 8 são o plano atual.
 
 | # | Tema | Decisão |
@@ -29,12 +29,17 @@
 | 6 | Frequência | "Dias específicos da semana" e "X vezes por semana". **Os dias não programados não quebram o streak.** |
 | 7 | Data de início | Passa a ser editável e os registos anteriores a ela são ignorados. |
 | 8 | Riverpod | Manter o **Riverpod 2**. |
-| 9 | Play Store | **Sim, mais tarde.** É preciso cumprir três requisitos: ter política de privacidade, preencher o formulário "Segurança dos dados" e permitir apagar a conta a partir da app. Por isso a app deixa de usar `USE_EXACT_ALARM` (1.10). |
+| 9 | Distribuição | **Mudou a 2026-10-07: a app NÃO vai para a Google Play Store.** O APK é distribuído numa **página web própria** (GitHub Pages), com os ficheiros nas **GitHub Releases**. Por isso saem o teste fechado com 12 testadores e o formulário "Segurança dos dados", e a dúvida 18 deixa de se aplicar. Continuam: política de privacidade, apagar a conta na app e uma página web para pedir a eliminação (exigidos pelo login Google e pela lei, não só pela Play Store). **Somos nós que guardamos a chave de assinatura** (2.10). A app avisa quando há uma versão nova (6.4). A **verificação de programador da Google** (obrigatória a partir de 2027 para instalar APKs em todos os países) entra na Fase 6. Os alarmes exatos mantêm o fluxo atual com `SCHEDULE_EXACT_ALARM` (1.10). O repositório `habit_app` é **público**, por isso o site e as releases ficam nele (só seria preciso um repositório separado se fosse privado). *(Antes: "Play Store, mais tarde".)* |
+| 19 | Dados locais | **Sem exportar/importar local** (dúvida 5): a 4.7 sai do plano, a nuvem chega. |
+| 20 | Regras | **Saltar dia** (dúvida 6): limite **por hábito**, **1 por semana** por omissão, semana de **segunda a domingo**, os saltos não usados **não acumulam**. **Pausa** (dúvida 7): **por hábito e global** (férias); durante a pausa **pode-se registar, mas não conta** para o streak. **"X vezes por semana"** (dúvida 8): o streak conta **semanas cumpridas** e a semana atual só o quebra quando termina; as conquistas destes hábitos são às **4, 12 e 52 semanas**. |
+| 21 | Projetos | **"Repetir"** cria um **ciclo novo, como hábito separado, ligado ao anterior** (dúvida 9). Um projeto **pode ser quantitativo e ter frequência não diária**, com as opções dos hábitos, e "Dia X de N" conta dias de calendário (dúvida 10). Um projeto **não "falha"**: os dias falhados ficam só nas estatísticas (dúvida 11). |
+| 22 | Motivação | Conquistas **por hábito e globais** (dúvida 12). **Resumo semanal ao domingo às 20:00** (dúvida 13); conteúdo proposto: hábitos feitos vs programados na semana, taxa, melhor sequência em curso e conquistas novas ⏳ (confirmar na 5.8). **Widget só para ver** o progresso (dúvida 14). |
+| 23 | Publicação | Relatórios de erros com **Sentry** (dúvida 15). Site em **GitHub Pages** (dúvida 16). |
 | 10 | Novas funcionalidades | **Projetos**: duração ou data de fim, barra "Dia X de N", ecrã de conclusão, arquivar/repetir/tornar permanente, modelos de 21/30/66 dias. **Progresso visual**: anel nos quantitativos, barra nos projetos, mapa de calor anual, anel "X de Y" no dashboard. **Outras**: pausa/modo férias, saltar dia com limite, notas por registo, resumo semanal por notificação, widget Android, conquistas por sequência (7/30/100). |
 
 **Estado do plano:** ✅ aprovado em 2026-09-24. **Fase 1 concluída** (PRs #1–#3, resumo na secção 10). As decisões da secção 11 foram tomadas a 2026-10-07 (decisões 12 a 18) e a **Fase 2 foi reduzida** ao que a Fase 3 precisa.
 **Testes no dispositivo:** ✅ a 1.1 e a 1.2 foram verificadas em 2026-10-07 num Samsung SM-G986U (Android 13, fuso `Africa/Maputo`), com testes de integração automáticos. Os resultados estão na secção 9.
-**Lembrete:** as dúvidas 5 a 18 da secção 8 são respondidas **no início da Fase 3**.
+**Dúvidas 5 a 18:** respondidas a 2026-10-07 (decisões 9 e 19 a 23). **Fase 2 concluída** (PRs #4–#13). **A seguir:** 2.10 (chave de release) e depois a 3.1.
 
 ---
 
@@ -246,7 +251,7 @@ Fase 3  Modelo v5 (migração única) + motor de regras (frequência, pausa, sal
    │
    └──► Fase 5  Projetos, progresso visual e motivação
                 │
-Fase 6  Publicação na Play Store (depois das Fases 4 e 5)
+Fase 6  Distribuição: página web própria + APK nas GitHub Releases (depois das Fases 4 e 5)
 ```
 
 As Fases 4 e 5 dependem só da Fase 3 e podem trocar de ordem. Como o modelo v5 já inclui os campos de sincronização, as funcionalidades da Fase 5 não obrigam a outra migração.
@@ -291,6 +296,8 @@ Reorganizada a 2026-10-07. **Ordem de execução:** 2.8 → 2.9 → 2.6 → 2.3 
 | 2.1d ✅ | Dividir o `habit_provider.dart` e `autoDispose` no detalhe (M7). *(Concluída em 2026-10-07.* <br>• O ficheiro de 632 linhas deu origem a `habit_list_provider.dart`, `habit_detail_provider.dart`, `habit_form_provider.dart`, `habit_queries_provider.dart` e `habit_log_action.dart`. O `habit_provider.dart` fica só a exportá-los, por isso os ecrãs não mudam. <br>• **M7:** o detalhe passa a `autoDispose.family`. A lista e o formulário só lhe tocam se o ecrã estiver aberto (`openHabitDetail`, com `ref.exists`): antes, cada hábito marcado no dashboard **criava** um notifier de detalhe, com consultas, que nunca era libertado. O notifier verifica `mounted` depois de cada `await`. <br>• Registar um dia passado no detalhe passa a recarregar sempre a lista: a sequência do tile ficava desatualizada. <br>• 2 testes novos (`detail_provider_lifecycle_test.dart`) que **falhavam antes** da correção. 88 testes. Fluxo no dispositivo.)* | M | 2.1c |
 | 2.2 ✅ | **Streams do Drift** (`watch()`) e queries agregadas em vez de N+1 (M4). *(Concluída em 2026-10-07.* <br>• `watch*` no `AppDatabase`, no `HabitRepository` e no `DriftHabitRepository`. `HabitQueries.watchHabitsWithTodayStatus` combina hábitos e registos com um `combineLatest2` próprio (`core/utils/combine_latest.dart`), sem acrescentar o rxdart. <br>• A lista e o detalhe subscrevem os streams, e a primeira emissão faz a carga inicial. Uma escrita na BD feita fora do ecrã (outro ecrã ou, na Fase 4, a sincronização) atualiza-os sem recarregar à mão. As subscrições são canceladas no `dispose`. O `load()` continua disponível para "Tentar de novo", para a mudança de dia e para repor após uma falha. <br>• **M4:** a lista faz 2 queries (desde a 2.1b) e o detalhe só lê o seu hábito. O streak global deixou de ser calculado 2× (A6). <br>• Testes: `memoryDatabase()` em `fixtures.dart` usa `closeStreamsSynchronously`, porque por omissão o Drift deixa um `Timer` pendente no fim de cada `testWidgets`. O `FailingRepository` simula a falha de carga no stream. 3 testes novos (`reactive_updates_test.dart`) que **falhavam antes**. 91 testes. Fluxo no dispositivo.)* | M | 2.1 |
 
+| 2.10 ✅ | **(nova, decisão 9, urgente: antes da Fase 4)** **Chave de assinatura de release própria.** *(Concluída em 2026-10-07.* <br>• Chave PKCS12 (RSA 4096, 10 000 dias, alias `habitapp`) em `%USERPROFILE%\.android-keys\habitapp\`, **fora do repositório**, com palavra-passe aleatória. <br>• `android/key.properties` (ignorado pelo Git, tal como `*.jks`/`*.keystore`) e `build.gradle.kts` com `signingConfigs.release`. Sem `key.properties` (ex.: num clone) o release cai na chave de debug; testado, e o `flutter build` não mostra o aviso do Gradle, por isso verifica-se o certificado com `apksigner` antes de distribuir. <br>• **SHA-1:** `77:8D:84:20:08:6D:F3:AB:58:81:3B:F8:02:61:39:D4:E5:74:A7:CB`, que a **4.2** regista no OAuth do login Google. <br>• Instruções de cópia de segurança e de verificação em `android/ASSINATURA.md`. Confirmado com `apksigner`: o APK de release vem assinado com a chave nova, não com a de debug. <br>• **Nota para a 6.2:** o APK universal tem 61 MB; dividir por ABI.)* | P | — |
+
 **Estimativa até ao início da Fase 3:** cerca de **8 a 12 dias úteis** (2.8: 0,1 · 2.9: 0,5 · 2.6: 1–2 · 2.3: 2 · 2.1: 3–5 · 2.2: 1–2).
 
 ### Fase 2b: depois da Fase 3
@@ -318,12 +325,12 @@ Reorganizada a 2026-10-07. **Ordem de execução:** 2.8 → 2.9 → 2.6 → 2.3 
 | # | Tarefa | Esforço | Depende de |
 |---|---|---|---|
 | 4.1 | Configurar o **Supabase**: projetos dev/prod, tabelas Postgres iguais às da v5, **RLS** (`user_id = auth.uid()`), *trigger* que preenche `server_updated_at` e migrações SQL versionadas no repositório | M | 3.1 |
-| 4.2 | **Login Google** (Supabase Auth + Google Sign-In no Android, com configuração do OAuth na Google Cloud e SHA-1 do *keystore*), sessão persistente, ecrã de conta e terminar sessão | M | 4.1 |
+| 4.2 | **Login Google** (Supabase Auth + Google Sign-In no Android, com configuração do OAuth na Google Cloud e o **SHA-1 da chave de release da 2.10**, mais o da chave de debug para desenvolvimento), sessão persistente, ecrã de conta e terminar sessão | M | 4.1, 2.10 |
 | 4.3 | **Motor de sincronização**, que funciona assim: <br>• marca as linhas alteradas no Drift (`isDirty`); <br>• envia-as em lote (*push*); <br>• recebe as alterações remotas desde a última sincronização, pelo `server_updated_at` (*pull*); <br>• em conflito, ganha a alteração com o `updatedAt` mais recente; <br>• as eliminações são `deletedAt` (*soft delete*); <br>• os dados chegam por ordem de dependência (categorias → hábitos → registos/pausas/conquistas); <br>• volta a tentar com *backoff*. <br>Sincroniza ao arrancar, ao recuperar a rede e depois de cada alteração (com *debounce*). Os testes usam um backend falso. | G | 4.1, 2.1, 2.2, 1.5 |
 | 4.4 | **(simplificada, decisão 4: conta obrigatória)** Todas as linhas já nascem com `userId`, por isso não há dados anónimos para juntar. Resta: *pull* inicial completo ao entrar num dispositivo novo e limpeza da BD local ao terminar sessão ou mudar de conta. *(Antes: M. Agora: P.)* | P | 4.3 |
-| 4.5 | **Apagar a conta a partir da app** (requisito da Play Store): dupla confirmação, depois apaga os dados remotos e a conta de autenticação (função no servidor) e por fim os dados locais. A Play Store também exige uma **página web** para pedir a eliminação. | M | 4.2 |
+| 4.5 | **Apagar a conta a partir da app**: dupla confirmação, depois apaga os dados remotos e a conta de autenticação (função no servidor) e por fim os dados locais. A **página web** para pedir a eliminação fica na 6.3. | M | 4.2 |
 | 4.6 | Onboarding: boas-vindas, **login Google obrigatório** (o `go_router` redireciona para o login quando não há sessão), nome, primeiro hábito (com modelos) e permissão de notificações no momento certo (antes 3.4) | M | 4.2, 1.10 |
-| 4.7 | Exportar/importar JSON local ⏳. Com a nuvem torna-se opcional e serve para portabilidade dos dados (antes 3.5). | M | 2.1, dúvida 5 |
+| ~~4.7~~ | ~~Exportar/importar JSON local~~: **cancelada** (decisão 19). | — | — |
 | 4.8 | **(antes 2.4, decisão 13)** Ecrã de **Definições** (conta, tema, lembretes) e **tema escuro** com tokens de cor (sistema/claro/escuro) | M | 4.2 |
 
 ### Fase 5: projetos, progresso visual e motivação
@@ -335,19 +342,21 @@ Reorganizada a 2026-10-07. **Ordem de execução:** 2.8 → 2.9 → 2.6 → 2.3 
 | 5.4 | **Anel "X de Y hábitos feitos hoje"** no dashboard (conta só os hábitos programados) | P | 3.3 |
 | 5.5 | **Mapa de calor anual** no detalhe (53 semanas, com os estados pausa/saltado/não programado) | M | 3.2 |
 | 5.6 | Estatísticas: gráfico para sim/não, taxa semanal e vista global (antes 2.9) | M | 3.2 |
-| 5.7 | **Conquistas** por sequência (7/30/100): calculadas pelo motor de streaks e guardadas quando desbloqueadas, para sincronizarem e não se repetirem. Inclui uma lista de conquistas e um aviso ao desbloquear. | M | 3.2, 3.1 |
-| 5.8 | **Resumo semanal** por notificação, calculado em segundo plano (`workmanager`) no dia e à hora configurados | M | 3.2, 1.10 |
+| 5.7 | **Conquistas** por hábito e globais (decisão 22) por sequência (7/30/100 dias; 4/12/52 semanas nos "X por semana"): calculadas pelo motor de streaks e guardadas quando desbloqueadas, para sincronizarem e não se repetirem. Inclui uma lista de conquistas e um aviso ao desbloquear. | M | 3.2, 3.1 |
+| 5.8 | **Resumo semanal** por notificação, calculado em segundo plano (`workmanager`), por omissão ao **domingo às 20:00** (decisão 22) | M | 3.2, 1.10 |
 | 5.9 | Arquivar hábitos e ordenação manual por arrastar (antes 3.3) | M | 3.1 |
-| 5.10 | **Widget Android** (`home_widget` + Kotlin) com a lista de hoje e o anel. Só ver é **M**; marcar hábitos a partir do widget é **G** ⏳. | M/G | 2.2, 3.3 |
+| 5.10 | **Widget Android** (`home_widget` + Kotlin) com a lista de hoje e o anel, **só para ver** (decisão 22). | M | 2.2, 3.3 |
 
-### Fase 6: publicação na Play Store
+### Fase 6: distribuição por página web própria
+Mudou a 2026-10-07 (decisão 9): sem Play Store. Saíram o formulário "Segurança dos dados" (antiga 6.3) e o teste fechado com 12 testadores (antiga 6.5).
+
 | # | Tarefa | Esforço | Depende de |
 |---|---|---|---|
-| 6.1 | Identidade: `applicationId` definitivo (**não pode mudar depois de publicar**), nome, ícone adaptativo e splash | P | dúvida 17 |
-| 6.2 | **Política de privacidade** numa página pública (dados recolhidos, finalidade, backend, retenção, eliminação), com link na app e na Play Console | P | 4.1, dúvida 16 |
-| 6.3 | Formulário **Segurança dos dados**: e-mail, ID do utilizador e dados da app; encriptação em trânsito; eliminação possível | P | 6.2 |
-| 6.4 | Build de release: Play App Signing, AAB, `targetSdk` atual, R8, versionamento e revisão das permissões | P | 1.10 |
-| 6.5 | Teste fechado. As contas pessoais de programador recentes precisam de um teste fechado com **12 testadores durante 14 dias** antes de poderem publicar em produção. Inclui relatórios de erros ⏳. | M | 6.4, dúvida 18 |
+| 6.1 | Identidade: o `applicationId` já está decidido (decisão 17) e **não pode mudar depois de distribuir** (uma atualização só se instala com o mesmo pacote e a mesma chave). Falta o ícone adaptativo e o splash. | P | — |
+| 6.2 | Build de release: assinado com a chave da 2.10, APK por ABI (o universal tem 61 MB), `targetSdk` atual, R8, versionamento (`versionCode` sempre a subir) e revisão das permissões. **Relatórios de erros com Sentry** (decisão 23). | M | 2.10, 1.10 |
+| 6.3 | **Página web da app** em **GitHub Pages** (decisão 23), no próprio repositório `habit_app` (é público; se passar a privado, usar um repositório público separado para o site e as releases): <br>• download do APK pelas **GitHub Releases**; <br>• instruções de instalação: permitir "apps desconhecidas" no browser e o que fazer no aviso do **Play Protect**; <br>• **política de privacidade** (dados recolhidos, finalidade, backend, retenção, eliminação), com link na app; <br>• **página de eliminação da conta**. | M | 4.1, 4.5, 6.2 |
+| 6.4 | **(nova)** **Verificação de atualizações na app**: ao abrir, lê um `versao.json` no site (versão, `versionCode`, URL do APK, notas) e, se houver uma versão mais recente, mostra um aviso com o botão para descarregar. Sem rede ou com o ficheiro inválido, não faz nada. | M | 6.3 |
+| 6.5 | **(nova)** **Verificação de programador da Google** (Android Developer Console), obrigatória a partir de 2027 para instalar APKs em todos os países: verificar a identidade e registar o pacote `com.abelmandjr.habitapp` com o certificado da chave da 2.10. | P | 2.10, 6.1 |
 
 ### Correspondência com o roadmap anterior
 Antes 2.3 → 2.4 · 2.4 → 3.9 · 2.5 → 2.7 · 2.6 → 3.10 · 2.7 → 2.3 · 2.8 → 2.5 + 6.1 · 2.9 → 5.6 · 2.10 → 2.6 · 3.1 → 3.1–3.3 · 3.2 → 3.8 · 3.3 → 5.9 · 3.4 → 4.6 · 3.5 → 4.7 · 3.6 → Fase 4 · 3.7 → 5.10 · 3.8 cancelada.
@@ -425,7 +434,7 @@ Guarda o que é do dispositivo e não sincroniza: tema, preferências da lista, 
 
 ## 8. Dúvidas em aberto
 
-> ⏰ **Lembrete: responder às dúvidas 5 a 18 no início da Fase 3**, antes da tarefa 3.1.
+> ✅ **Dúvidas 5 a 18 respondidas a 2026-10-07**: aceites as recomendações, exceto a 18, que deixou de se aplicar (sem Play Store, decisão 9). Ver as decisões 9 e 19 a 23.
 >
 > 2026-10-07: enviadas as recomendações para as dúvidas 5 a 18, à espera de resposta. **A 17 está respondida** (decisão 17) e **a 19 também** (1.1 verificada no dispositivo, secção 9). Recomendações: 5 não · 6 por hábito, 1/semana, seg–dom, sem acumular · 7 ambas, registos permitidos sem contar · 8 semanas cumpridas, conquistas 4/12/52 semanas · 9 ciclo novo ligado ao anterior · 10 sim · 11 não, só estatísticas · 12 ambas · 13 domingo 20:00 · 14 só visualização · 15 Sentry · 16 GitHub Pages · 18 depende da conta.
 
@@ -466,7 +475,7 @@ Guarda o que é do dispositivo e não sincroniza: tema, preferências da lista, 
 15. Queres relatórios de erros (Crashlytics ou Sentry)?
 16. Onde vais publicar a política de privacidade e a página de eliminação da conta (GitHub Pages, site próprio, Google Sites)?
 17. Qual o `applicationId` definitivo (ex.: `com.<nome>.habitos`) e o nome da app na loja?
-18. A tua conta de programador Google Play é pessoal ou de organização? Isto define se é obrigatório o teste com 12 testadores.
+18. ~~A tua conta de programador Google Play é pessoal ou de organização?~~ Já não se aplica: a app não vai para a Play Store (decisão 9).
 
 **Pendente da ronda anterior**
 
