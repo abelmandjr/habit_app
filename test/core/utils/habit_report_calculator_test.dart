@@ -5,7 +5,7 @@ import '../../helpers/fixtures.dart';
 
 void main() {
   group('buildYesNoReport', () {
-    test('conta dias feitos, falhados e taxa desde a criação', () {
+    test('conta dias feitos, falhados e taxa desde a criação (hoje por fazer não é falha)', () {
       final habit = makeHabit(createdAt: DateTime(2026, 6, 6, 18));
       final report = atTestNow(
         () => HabitReportCalculator.buildYesNoReport(
@@ -19,8 +19,9 @@ void main() {
 
       expect(report.trackedDays, 10); // 6 a 15 de junho, inclusive
       expect(report.daysDone, 5);
-      expect(report.daysFailed, 5);
-      expect(report.successRate, 50);
+      // 9 dias já avaliados (6 a 14); hoje (15) ainda está por fazer.
+      expect(report.daysFailed, 4);
+      expect(report.successRate, closeTo(5 / 9 * 100, 0.01));
     });
 
     test(
@@ -37,7 +38,6 @@ void main() {
         expect(report.daysDone, 1);
         expect(report.successRate, lessThanOrEqualTo(100));
       },
-      skip: 'Bug M1: corrigido na tarefa 1.6',
     );
 
     test(
@@ -53,7 +53,6 @@ void main() {
 
         expect(report.daysFailed, 0);
       },
-      skip: 'Bug M1: corrigido na tarefa 1.6',
     );
   });
 

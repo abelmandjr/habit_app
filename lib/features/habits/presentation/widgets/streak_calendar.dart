@@ -167,6 +167,9 @@ class _StreakCalendarState extends State<StreakCalendar> {
                           ),
                           day: day,
                           today: today,
+                          startKey: HabitDateUtils.dateKey(
+                            widget.habitCreatedAt,
+                          ),
                           completionDates: widget.completionDates,
                           loggedDates: widget.loggedDates,
                           onTap: widget.onDayTap,
@@ -211,6 +214,7 @@ class _HeatmapDay extends StatelessWidget {
     super.key,
     required this.day,
     required this.today,
+    required this.startKey,
     required this.completionDates,
     this.loggedDates,
     this.onTap,
@@ -218,6 +222,9 @@ class _HeatmapDay extends StatelessWidget {
 
   final DateTime day;
   final DateTime today;
+
+  /// Dia de início do hábito (`YYYY-MM-DD`); os dias anteriores ficam inativos.
+  final String startKey;
   final Set<String> completionDates;
   final Set<String>? loggedDates;
   final void Function(DateTime day)? onTap;
@@ -227,6 +234,8 @@ class _HeatmapDay extends StatelessWidget {
     final key = HabitDateUtils.dateKey(day);
     final isToday = _sameDay(day, today);
     final isFuture = day.isAfter(today);
+    // Antes da data de início não há registos possíveis (decisão 7).
+    final beforeStart = key.compareTo(startKey) < 0;
     final dayNorm = HabitDateUtils.startOfDay(day);
     final completed = completionDates.contains(key);
     final logged = loggedDates?.contains(key) ?? completed;
@@ -236,7 +245,7 @@ class _HeatmapDay extends StatelessWidget {
     Color textColor = theme.colorScheme.onSurfaceVariant;
     Border? border;
 
-    if (isFuture) {
+    if (isFuture || beforeStart) {
       fill = theme.colorScheme.surfaceContainerHighest;
       textColor = theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5);
     } else if (isToday) {
@@ -255,10 +264,9 @@ class _HeatmapDay extends StatelessWidget {
       fill = StreakCalendar.loggedIncompleteRed;
       textColor = Colors.white;
     }
-    // Sem registo: mantém fill neutro (passado ou antes da criação).
+    // Sem registo: mantém fill neutro.
 
-    // Permite editar qualquer dia passado (incl. antes da criação) para migração de histórico.
-    final canTap = onTap != null && !isFuture;
+    final canTap = onTap != null && !isFuture && !beforeStart;
 
     return Padding(
       padding: const EdgeInsets.all(2),

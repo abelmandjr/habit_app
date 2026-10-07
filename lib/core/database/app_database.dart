@@ -58,42 +58,27 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 4;
 
+  /// A v4 é a base do schema: a app nunca foi distribuída (decisão 11).
+  /// As migrações seguintes (v5, …) são incrementais e testadas (tarefa 3.1).
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
         },
         onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.createTable(habitCompletions);
-            await m.addColumn(habits, habits.description);
-            await m.addColumn(habits, habits.reminderHour);
-            await m.addColumn(habits, habits.reminderMinute);
-            await m.addColumn(habits, habits.reminderEnabled);
-            await m.addColumn(habits, habits.createdAt);
-
-            final legacy = await select(habits).get();
-            final today = HabitDateUtils.todayKey();
-            for (final habit in legacy) {
-              if (habit.isCompleted) {
-                await into(habitCompletions).insert(
-                  HabitCompletionsCompanion.insert(
-                    habitId: habit.id,
-                    date: today,
-                  ),
-                  mode: InsertMode.insertOrIgnore,
-                );
-              }
-            }
-          }
-          if (from < 3) {
-            await m.addColumn(habits, habits.habitType);
-            await m.addColumn(habits, habits.unit);
-            await m.addColumn(habitCompletions, habitCompletions.loggedValue);
-          }
           if (from < 4) {
-            await m.createTable(appSettings);
+            // Versões anteriores à base só existem em dispositivos de
+            // desenvolvimento: recria tudo em vez de migrar os dados.
+            for (final table in allTables.toList().reversed) {
+              await m.deleteTable(table.actualTableName);
+            }
+            await m.createAll();
           }
+        },
+        beforeOpen: (details) async {
+          // Sem isto, o SQLite ignora as chaves estrangeiras (e o
+          // ON DELETE CASCADE de habit_completions).
+          await customStatement('PRAGMA foreign_keys = ON');
         },
       );
 
@@ -258,8 +243,11 @@ class AppDatabase extends _$AppDatabase {
           ..where((t) => t.habitId.equals(habitId)))
         .get();
 
+    // Registos anteriores à data de início não contam (decisão 7).
+    final startKey = HabitDateUtils.dateKey(habit.createdAt);
     final dates = <String>{};
     for (final row in rows) {
+      if (row.date.compareTo(startKey) < 0) continue;
       if (await isGoalMet(habit, row)) {
         dates.add(row.date);
       }
