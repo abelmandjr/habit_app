@@ -1,3 +1,5 @@
+import 'package:clock/clock.dart';
+
 import '../database/app_database.dart';
 import '../models/habit_type.dart';
 import 'date_utils.dart';
@@ -71,13 +73,13 @@ class HabitReportCalculator {
 
   static int trackedDaysSince(DateTime createdAt) {
     final start = HabitDateUtils.startOfDay(createdAt);
-    final today = HabitDateUtils.startOfDay(DateTime.now());
+    final today = HabitDateUtils.startOfDay(clock.now());
     return today.difference(start).inDays + 1;
   }
 
   static Iterable<DateTime> daysFromCreation(DateTime createdAt) {
     final start = HabitDateUtils.startOfDay(createdAt);
-    final today = HabitDateUtils.startOfDay(DateTime.now());
+    final today = HabitDateUtils.startOfDay(clock.now());
     final count = today.difference(start).inDays + 1;
     return List.generate(
       count,
@@ -188,7 +190,7 @@ class HabitReportCalculator {
     final earliest = habits
         .map((h) => HabitDateUtils.startOfDay(h.createdAt))
         .reduce((a, b) => a.isBefore(b) ? a : b);
-    final today = HabitDateUtils.startOfDay(DateTime.now());
+    final today = HabitDateUtils.startOfDay(clock.now());
     var cursor = earliest;
 
     while (!cursor.isAfter(today)) {

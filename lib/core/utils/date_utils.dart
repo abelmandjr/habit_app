@@ -1,3 +1,5 @@
+import 'package:clock/clock.dart';
+
 class HabitDateUtils {
   HabitDateUtils._();
 
@@ -8,7 +10,7 @@ class HabitDateUtils {
     return '$y-$m-$d';
   }
 
-  static String todayKey() => dateKey(DateTime.now());
+  static String todayKey() => dateKey(clock.now());
 
   static DateTime parseKey(String key) {
     final parts = key.split('-');
@@ -23,7 +25,7 @@ class HabitDateUtils {
       DateTime(date.year, date.month, date.day);
 
   static List<DateTime> lastDays(int count) {
-    final today = startOfDay(DateTime.now());
+    final today = startOfDay(clock.now());
     return List.generate(
       count,
       (i) => today.subtract(Duration(days: count - 1 - i)),
