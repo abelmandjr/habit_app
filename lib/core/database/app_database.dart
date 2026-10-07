@@ -1,11 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
-import '../models/habit_type.dart';
-import '../utils/date_utils.dart';
-import '../utils/habit_report_calculator.dart';
-import '../utils/streak_calculator.dart';
-
 part 'app_database.g.dart';
 
 @DataClassName('HabitData')
@@ -134,7 +129,9 @@ class AppDatabase extends _$AppDatabase {
   Future<List<HabitCompletion>> getAllCompletions() =>
       select(habitCompletions).get();
 
-  Future<HabitCompletion?> _completionRow(String habitId, String date) async {
+  /// Registo de [habitId] no dia [date]. Se houver duplicados (de versões
+  /// antigas), fica o mais recente e os restantes são apagados.
+  Future<HabitCompletion?> getCompletion(String habitId, String date) async {
     final rows = await (select(habitCompletions)
           ..where((t) => t.habitId.equals(habitId) & t.date.equals(date)))
         .get();
@@ -155,7 +152,7 @@ class AppDatabase extends _$AppDatabase {
     required String date,
     required Value<double?> loggedValue,
   }) async {
-    final existing = await _completionRow(habitId, date);
+    final existing = await getCompletion(habitId, date);
     if (existing != null) {
       await (update(habitCompletions)
             ..where(
@@ -171,25 +168,6 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
     }
-  }
-
-  Future<bool> isGoalMet(HabitData habit, HabitCompletion? row) async {
-    if (row == null) return false;
-    final type = HabitType.fromKey(habit.habitType);
-    if (type == HabitType.yesNo) return true;
-    return (row.loggedValue ?? 0) >= habit.goalValue;
-  }
-
-  Future<bool> isCompletedOn(String habitId, String date) async {
-    final habit = await getHabitById(habitId);
-    if (habit == null) return false;
-    final row = await _completionRow(habitId, date);
-    return isGoalMet(habit, row);
-  }
-
-  Future<double?> getLoggedValue(String habitId, String date) async {
-    final row = await _completionRow(habitId, date);
-    return row?.loggedValue;
   }
 
   Future<void> setYesNoCompletion(
@@ -226,46 +204,6 @@ class AppDatabase extends _$AppDatabase {
       habitId: habitId,
       date: date,
       loggedValue: Value(value),
-    );
-  }
-
-  Future<void> toggleToday(String habitId) async {
-    final today = HabitDateUtils.todayKey();
-    final done = await isCompletedOn(habitId, today);
-    await setYesNoCompletion(habitId, today, !done);
-  }
-
-  Future<Set<String>> getCompletionDates(String habitId) async {
-    final habit = await getHabitById(habitId);
-    if (habit == null) return {};
-
-    final rows = await (select(habitCompletions)
-          ..where((t) => t.habitId.equals(habitId)))
-        .get();
-
-    // Registos anteriores à data de início não contam (decisão 7).
-    final startKey = HabitDateUtils.dateKey(habit.createdAt);
-    final dates = <String>{};
-    for (final row in rows) {
-      if (row.date.compareTo(startKey) < 0) continue;
-      if (await isGoalMet(habit, row)) {
-        dates.add(row.date);
-      }
-    }
-    return dates;
-  }
-
-  Future<StreakStats> getStreakStats(String habitId) async {
-    final dates = await getCompletionDates(habitId);
-    return StreakCalculator.compute(dates);
-  }
-
-  Future<GlobalStreakStats> getGlobalStreakStats() async {
-    final allHabits = await getAllHabits();
-    final allCompletions = await getAllCompletions();
-    return HabitReportCalculator.computeGlobalStreak(
-      habits: allHabits,
-      allCompletions: allCompletions,
     );
   }
 }

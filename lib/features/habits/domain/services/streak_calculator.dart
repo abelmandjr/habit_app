@@ -1,4 +1,4 @@
-import 'date_utils.dart';
+import '../../../../core/utils/date_utils.dart';
 
 class StreakStats {
   const StreakStats({

@@ -1,7 +1,6 @@
-import 'package:habit_app/core/database/app_database.dart';
-import 'package:habit_app/core/models/habit_type.dart';
 import 'package:habit_app/core/notifications/notification_service.dart';
-import 'package:habit_app/features/habits/data/repositories/habit_repository_impl.dart';
+import 'package:habit_app/features/habits/data/repositories/drift_habit_repository.dart';
+import 'package:habit_app/features/habits/domain/entities/habit.dart';
 
 /// Evita chamadas ao plugin nativo de notificações nos testes.
 class FakeNotifications implements NotificationService {
@@ -32,7 +31,9 @@ class FakeNotifications implements NotificationService {
   Future<bool> canScheduleExactAlarms() async => exactAlarmsAllowed;
 
   @override
-  Future<bool> syncExactAlarmPermission(AppDatabase db) async =>
+  Future<bool> syncExactAlarmPermission(
+    Future<List<HabitReminder>> Function() loadReminders,
+  ) async =>
       exactAlarmsAllowed;
 
   @override
@@ -47,8 +48,8 @@ class FakeNotifications implements NotificationService {
 }
 
 /// Repositório real (BD em memória) em que as escritas falham sempre e a
-/// leitura da lista falha as primeiras [failedLoads] vezes.
-class FailingRepository extends HabitRepositoryImpl {
+/// leitura dos hábitos falha as primeiras [failedLoads] vezes.
+class FailingRepository extends DriftHabitRepository {
   FailingRepository(super.db, {this.failedLoads = 0});
 
   int failedLoads;
@@ -56,41 +57,24 @@ class FailingRepository extends HabitRepositoryImpl {
   static Future<void> _fail() => Future.error(Exception('falha simulada'));
 
   @override
-  Future<List<HabitWithToday>> getHabitsWithTodayStatus() {
+  Future<List<Habit>> getHabits() {
     if (failedLoads > 0) {
       failedLoads--;
       return Future.error(Exception('falha simulada'));
     }
-    return super.getHabitsWithTodayStatus();
+    return super.getHabits();
   }
 
   @override
-  Future<void> setYesNoForDate(String habitId, String date, bool completed) =>
-      _fail();
+  Future<void> setYesNo(String habitId, String date, bool done) => _fail();
 
   @override
-  Future<void> setQuantitativeForDate(
-    String habitId,
-    String date,
-    double value,
-  ) =>
+  Future<void> setQuantity(String habitId, String date, double value) =>
       _fail();
 
   @override
   Future<void> deleteHabit(String id) => _fail();
 
   @override
-  Future<void> createHabit({
-    required String id,
-    required String title,
-    required String description,
-    required String category,
-    required HabitType habitType,
-    required int goalValue,
-    String? unit,
-    bool reminderEnabled = false,
-    int? reminderHour,
-    int? reminderMinute,
-  }) =>
-      _fail();
+  Future<void> createHabit(Habit habit) => _fail();
 }

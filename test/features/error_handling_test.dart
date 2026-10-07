@@ -13,6 +13,7 @@ import 'package:habit_app/features/habits/presentation/providers/habit_provider.
 
 import '../helpers/fakes.dart';
 import '../helpers/test_app.dart';
+import '../helpers/fixtures.dart';
 
 /// Tarefa 1.3: falhas de escrita e de leitura mostram feedback ao utilizador
 /// e repõem o estado, sem exceções por apanhar.
@@ -56,7 +57,7 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text(testL10n.errorSaveLog), findsOneWidget);
       expect(find.byIcon(Icons.check_rounded), findsNothing);
-      expect(await db.isCompletedOn('h1', HabitDateUtils.todayKey()), isFalse);
+      expect(await queriesFor(db).isCompletedOn('h1', HabitDateUtils.parseKey(HabitDateUtils.todayKey())), isFalse);
     });
 
     testWidgets('falha ao eliminar mostra erro e o hábito volta à lista', (

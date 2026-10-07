@@ -1,6 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:habit_app/core/database/app_database.dart';
 import 'package:habit_app/core/notifications/notification_service.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -28,27 +27,21 @@ void main() {
         now.minute,
       ).add(const Duration(minutes: 2));
 
-      final habit = HabitData(
-        id: 'integration-test-reminder',
+      final reminder = HabitReminder(
+        habitId: 'integration-test-reminder',
         title: 'Teste de lembrete',
-        description: '',
-        category: 'Geral',
-        habitType: 'yesNo',
-        goalValue: 1,
-        isCompleted: false,
-        reminderEnabled: true,
-        reminderHour: target.hour,
-        reminderMinute: target.minute,
-        createdAt: now,
+        enabled: true,
+        hour: target.hour,
+        minute: target.minute,
       );
-      final id = service.notificationIdForHabit(habit.id);
+      final id = service.notificationIdForHabit(reminder.habitId);
       final android = FlutterLocalNotificationsPlugin()
           .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>()!;
 
       try {
         final exact = await service.canScheduleExactAlarms();
-        await service.syncHabitReminder(habit);
+        await service.syncHabitReminder(reminder);
 
         // ignore: avoid_print
         print('IT_REMINDER scheduled id=$id tz=${tz.local.name} '
@@ -84,7 +77,7 @@ void main() {
         // Deixa a notificação visível 20 s para o dumpsys notification.
         await Future<void>.delayed(const Duration(seconds: 20));
       } finally {
-        await service.cancelHabitReminder(habit.id);
+        await service.cancelHabitReminder(reminder.habitId);
       }
     },
     timeout: const Timeout(Duration(minutes: 6)),

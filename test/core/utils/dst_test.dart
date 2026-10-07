@@ -2,8 +2,8 @@ import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:habit_app/core/notifications/notification_service.dart';
 import 'package:habit_app/core/utils/date_utils.dart';
-import 'package:habit_app/core/utils/habit_report_calculator.dart';
-import 'package:habit_app/core/utils/streak_calculator.dart';
+import 'package:habit_app/features/habits/domain/services/habit_report_calculator.dart';
+import 'package:habit_app/features/habits/domain/services/streak_calculator.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -133,14 +133,14 @@ void main() {
     test('streak global avalia o dia de hoje no dia da mudança de hora', () {
       final habit = makeHabit(createdAt: DateTime(2026, 3, 1));
       final completions = [
-        for (final d in daysEndingAt('2026-03-08', 8)) makeCompletion('h1', d),
+        for (final d in daysEndingAt('2026-03-08', 8)) makeLog('h1', d),
       ];
       final stats = at(
         newYork,
         DateTime(2026, 3, 8, 12),
         () => HabitReportCalculator.computeGlobalStreak(
           habits: [habit],
-          allCompletions: completions,
+          allLogs: completions,
         ),
       );
       expect(stats.currentStreak, 8);

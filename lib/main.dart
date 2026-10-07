@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/notifications/notification_service.dart';
-import 'core/providers/database_provider.dart';
 import 'core/routes/app_router.dart';
 import 'core/theme/light_theme.dart';
 import 'core/utils/date_utils.dart';
+import 'features/habits/domain/habit_reminders.dart';
 import 'features/habits/presentation/providers/habit_provider.dart';
 import 'l10n/app_locale.dart';
 import 'l10n/app_localizations.dart';
@@ -82,9 +82,10 @@ class _MyAppState extends ConsumerState<MyApp> {
     _checkDayChange();
     _scheduleMidnightTimer();
     try {
-      await ref
-          .read(notificationServiceProvider)
-          .syncExactAlarmPermission(ref.read(dbProvider));
+      final repository = ref.read(habitRepositoryProvider);
+      await ref.read(notificationServiceProvider).syncExactAlarmPermission(
+        () async => [for (final h in await repository.getHabits()) h.reminder],
+      );
     } catch (e) {
       debugPrint('Falha ao verificar alarmes exatos: $e');
     }

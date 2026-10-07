@@ -6,11 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:habit_app/core/database/app_database.dart';
 import 'package:habit_app/core/notifications/notification_service.dart';
 import 'package:habit_app/core/providers/database_provider.dart';
-import 'package:habit_app/core/utils/date_utils.dart';
 import 'package:habit_app/features/habits/presentation/pages/habit_detail_page.dart';
 
 import '../../helpers/fakes.dart';
 import '../../helpers/test_app.dart';
+import '../../helpers/fixtures.dart';
 
 const _months = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', //
@@ -66,7 +66,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final day = DateTime(previousMonth.year, previousMonth.month, 15);
-    expect(await db.isCompletedOn('h1', HabitDateUtils.dateKey(day)), isTrue);
+    expect(await queriesFor(db).isCompletedOn('h1', day), isTrue);
     expect(find.text(previousLabel), findsOneWidget,
         reason: 'O calendário voltou ao mês atual');
   });

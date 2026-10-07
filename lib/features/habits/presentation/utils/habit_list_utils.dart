@@ -1,4 +1,4 @@
-import '../../data/repositories/habit_repository_impl.dart';
+import '../../domain/models/habit_with_today.dart';
 import '../providers/habit_list_preferences.dart';
 
 List<HabitWithToday> applyHabitListPreferences(

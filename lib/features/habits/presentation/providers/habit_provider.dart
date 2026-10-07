@@ -1,24 +1,28 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart';
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../../core/database/app_database.dart';
 import '../../../../core/models/habit_type.dart';
 import '../../../../core/notifications/notification_service.dart';
-import '../../../../core/providers/database_provider.dart';
 import '../../../../core/storage/user_settings_service.dart';
 import '../../../../core/utils/date_utils.dart';
-import '../../../../core/utils/habit_report_calculator.dart';
-import '../../../../core/utils/streak_calculator.dart';
-import '../../data/repositories/habit_repository_impl.dart';
+import '../../data/habit_repository_provider.dart';
+import '../../domain/entities/habit.dart';
+import '../../domain/habit_reminders.dart';
+import '../../domain/models/habit_with_today.dart';
+import '../../domain/repositories/habit_repository.dart';
+import '../../domain/services/habit_queries.dart';
+import '../../domain/services/habit_report_calculator.dart';
+import '../../domain/services/streak_calculator.dart';
 
-export '../../data/repositories/habit_repository_impl.dart';
+export '../../data/habit_repository_provider.dart';
+export '../../domain/models/habit_with_today.dart';
 
-final habitRepositoryProvider = Provider<HabitRepositoryImpl>((ref) {
-  return HabitRepositoryImpl(ref.watch(dbProvider));
+final habitQueriesProvider = Provider<HabitQueries>((ref) {
+  return HabitQueries(ref.watch(habitRepositoryProvider));
 });
 
 final habitListProvider =
@@ -28,7 +32,7 @@ final habitListProvider =
 
 final globalStreakProvider = FutureProvider<GlobalStreakStats>((ref) async {
   ref.watch(habitListProvider);
-  return ref.watch(habitRepositoryProvider).getGlobalStreakStats();
+  return ref.watch(habitQueriesProvider).getGlobalStreakStats();
 });
 
 class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> {
@@ -39,14 +43,15 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
   final Ref _ref;
   static var _remindersSynced = false;
 
-  HabitRepositoryImpl get _repo => _ref.read(habitRepositoryProvider);
+  HabitRepository get _repo => _ref.read(habitRepositoryProvider);
+  HabitQueries get _queries => _ref.read(habitQueriesProvider);
   NotificationService get _notifications =>
       _ref.read(notificationServiceProvider);
 
   Future<void> load({bool silent = false}) async {
     if (!silent) state = const AsyncLoading();
     try {
-      final data = await _repo.getHabitsWithTodayStatus();
+      final data = await _queries.getHabitsWithTodayStatus();
       state = AsyncData(data);
     } catch (e, st) {
       state = AsyncError(e, st);
@@ -62,10 +67,8 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
   /// Uma falha nas notificações não deve deixar a lista em estado de erro.
   Future<void> _syncReminders() async {
     try {
-      final habits = await _ref.read(dbProvider).getAllHabits();
-      for (final habit in habits) {
-        await _notifications.syncHabitReminder(habit);
-      }
+      final habits = await _repo.getHabits();
+      await _notifications.rescheduleAll([for (final h in habits) h.reminder]);
     } catch (e, st) {
       debugPrint('Falha ao reagendar lembretes: $e\n$st');
     }
@@ -91,9 +94,9 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
 
     try {
       if (item.type == HabitType.yesNo && yesNo != null) {
-        await _repo.setYesNoForDate(item.habit.id, dateKey, yesNo);
+        await _repo.setYesNo(item.habit.id, dateKey, yesNo);
       } else if (item.type == HabitType.quantitative && quantity != null) {
-        await _repo.setQuantitativeForDate(item.habit.id, dateKey, quantity);
+        await _repo.setQuantity(item.habit.id, dateKey, quantity);
       }
 
       await _ref
@@ -181,7 +184,8 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
   final Ref _ref;
   final String _habitId;
 
-  HabitRepositoryImpl get _repo => _ref.read(habitRepositoryProvider);
+  HabitRepository get _repo => _ref.read(habitRepositoryProvider);
+  HabitQueries get _queries => _ref.read(habitQueriesProvider);
 
   Future<void> refresh() async {
     if (state.valueOrNull == null) {
@@ -189,23 +193,23 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
     }
 
     try {
-      final habit = await _repo.getHabitById(_habitId);
-      if (habit == null) {
+      // Só o hábito deste ecrã (antes carregava a lista inteira).
+      final todayItem = await _queries.getHabitWithToday(_habitId);
+      if (todayItem == null) {
         state = const AsyncData(null);
         return;
       }
 
-      final type = HabitType.fromKey(habit.habitType);
-      final todayItems = await _repo.getHabitsWithTodayStatus();
-      final todayItem = todayItems.firstWhere((h) => h.habit.id == _habitId);
+      final habit = todayItem.habit;
+      final type = habit.type;
 
       YesNoHabitReport? yesNoReport;
       QuantitativeHabitReport? quantitativeReport;
 
       if (type == HabitType.yesNo) {
-        yesNoReport = await _repo.getYesNoReport(_habitId);
+        yesNoReport = await _queries.getYesNoReport(_habitId);
       } else {
-        quantitativeReport = await _repo.getQuantitativeReport(_habitId);
+        quantitativeReport = await _queries.getQuantitativeReport(_habitId);
       }
 
       state = AsyncData(
@@ -225,7 +229,7 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
   Future<void> toggleToday() async {
     final current = state.valueOrNull;
     if (current == null) return;
-    if (HabitType.fromKey(current.habit.habitType) != HabitType.yesNo) return;
+    if (current.habit.type != HabitType.yesNo) return;
 
     await _ref.read(habitListProvider.notifier).logHabit(
           HabitWithToday(
@@ -246,7 +250,7 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
     if (current == null) return;
 
     final isToday = dateKey == HabitDateUtils.todayKey();
-    final type = HabitType.fromKey(current.habit.habitType);
+    final type = current.habit.type;
 
     if (type == HabitType.yesNo && yesNo != null && current.yesNoReport != null) {
       final dates = Set<String>.from(current.yesNoReport!.completionDates);
@@ -321,9 +325,9 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
 
     try {
       if (yesNo != null) {
-        await _repo.setYesNoForDate(_habitId, key, yesNo);
+        await _repo.setYesNo(_habitId, key, yesNo);
       } else if (quantity != null) {
-        await _repo.setQuantitativeForDate(_habitId, key, quantity);
+        await _repo.setQuantity(_habitId, key, quantity);
       }
     } catch (_) {
       // Repõe o que está na BD, desfazendo a atualização otimista.
@@ -348,7 +352,7 @@ class HabitDetailState {
     this.quantitativeReport,
   });
 
-  final HabitData habit;
+  final Habit habit;
   final bool completedToday;
   final double? todayValue;
   final YesNoHabitReport? yesNoReport;
@@ -481,13 +485,13 @@ class HabitFormNotifier extends StateNotifier<HabitFormState> {
 
   Future<void> loadForEdit(String habitId) async {
     state = state.copyWith(isLoading: true, habitId: habitId);
-    final habit = await _ref.read(habitRepositoryProvider).getHabitById(habitId);
+    final habit = await _ref.read(habitRepositoryProvider).getHabit(habitId);
     if (habit == null) {
       state = state.copyWith(isLoading: false);
       return;
     }
 
-    final type = HabitType.fromKey(habit.habitType);
+    final type = habit.type;
     final categories = await _ref.read(userSettingsServiceProvider).getAllCategories();
     final isCustom = !defaultCategories.contains(habit.category);
 
@@ -554,6 +558,7 @@ class HabitFormNotifier extends StateNotifier<HabitFormState> {
 
     final hour = state.reminderTime?.hour;
     final minute = state.reminderTime?.minute;
+    final isQuantitative = state.habitType == HabitType.quantitative;
 
     try {
       if (state.useCustomCategory && state.customCategory.trim().isNotEmpty) {
@@ -562,46 +567,38 @@ class HabitFormNotifier extends StateNotifier<HabitFormState> {
       }
 
       if (state.isEditing) {
-        final existing = await repo.getHabitById(state.habitId!);
+        final existing = await repo.getHabit(state.habitId!);
         if (existing == null) return false;
 
         final updated = existing.copyWith(
           title: state.title.trim(),
           description: state.description.trim(),
           category: category,
-          habitType: state.habitType!.storageKey,
-          unit: Value(
-            state.habitType == HabitType.quantitative
-                ? state.unit.trim()
-                : null,
-          ),
+          type: state.habitType!,
+          unit: isQuantitative ? state.unit.trim() : null,
           goalValue: state.goalValue,
-          reminderEnabled: state.reminderEnabled,
-          reminderHour: Value(state.reminderEnabled ? hour : null),
-          reminderMinute: Value(state.reminderEnabled ? minute : null),
-        );
-        await repo.updateHabit(updated);
-        await notifications.syncHabitReminder(updated);
-      } else {
-        final id = const Uuid().v4();
-        await repo.createHabit(
-          id: id,
-          title: state.title.trim(),
-          description: state.description.trim(),
-          category: category,
-          habitType: state.habitType!,
-          goalValue: state.goalValue,
-          unit: state.habitType == HabitType.quantitative
-              ? state.unit.trim()
-              : null,
           reminderEnabled: state.reminderEnabled,
           reminderHour: state.reminderEnabled ? hour : null,
           reminderMinute: state.reminderEnabled ? minute : null,
         );
-        final created = await repo.getHabitById(id);
-        if (created != null) {
-          await notifications.syncHabitReminder(created);
-        }
+        await repo.updateHabit(updated);
+        await notifications.syncHabitReminder(updated.reminder);
+      } else {
+        final created = Habit(
+          id: const Uuid().v4(),
+          title: state.title.trim(),
+          description: state.description.trim(),
+          category: category,
+          type: state.habitType!,
+          goalValue: state.goalValue,
+          unit: isQuantitative ? state.unit.trim() : null,
+          reminderEnabled: state.reminderEnabled,
+          reminderHour: state.reminderEnabled ? hour : null,
+          reminderMinute: state.reminderEnabled ? minute : null,
+          createdAt: clock.now(),
+        );
+        await repo.createHabit(created);
+        await notifications.syncHabitReminder(created.reminder);
       }
 
       await _ref.read(habitListProvider.notifier).load(silent: true);

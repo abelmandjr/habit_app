@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:habit_app/core/utils/streak_calculator.dart';
+import 'package:habit_app/features/habits/domain/services/streak_calculator.dart';
 
-import '../../helpers/fixtures.dart';
+import '../../../../helpers/fixtures.dart';
 
 StreakStats compute(Set<String> dates) =>
     atTestNow(() => StreakCalculator.compute(dates));

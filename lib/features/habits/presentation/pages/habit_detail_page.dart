@@ -83,11 +83,11 @@ class HabitDetailPage extends ConsumerWidget {
           }
 
           final habit = detail.habit;
-          final type = HabitType.fromKey(habit.habitType);
+          final type = habit.type;
           final unit = habit.unit ?? '';
           final notifier =
               ref.read(habitDetailNotifierProvider(habitId).notifier);
-          final repo = ref.read(habitRepositoryProvider);
+          final queries = ref.read(habitQueriesProvider);
           final listItem = HabitWithToday(
             habit: habit,
             completedToday: detail.completedToday,
@@ -95,8 +95,8 @@ class HabitDetailPage extends ConsumerWidget {
           );
 
           Future<void> openLogForDay(DateTime day) async {
-            final completed = await repo.isCompletedOnDate(habitId, day);
-            final value = await repo.getValueForDate(habitId, day);
+            final completed = await queries.isCompletedOn(habitId, day);
+            final value = await queries.getValueOn(habitId, day);
             if (!context.mounted) return;
             await showHabitLogSheet(
               context: context,
