@@ -57,7 +57,7 @@ void main() {
     final done = await db.isCompletedOn('h1', HabitDateUtils.todayKey());
     expect(done, isTrue);
     expect(find.byIcon(Icons.check_rounded), findsOneWidget);
-  }, skip: true); // Bug A6 (CircularDependencyError): corrigido na tarefa 1.12
+  });
 
   testWidgets('eliminar com swipe remove o hábito sem erros (tarefa 1.2)', (
     tester,
@@ -74,6 +74,37 @@ void main() {
     expect(find.text('Meditar'), findsNothing);
     expect(find.text('Nenhum hábito ainda'), findsOneWidget);
     expect(await db.getAllHabits(), isEmpty);
-  }, skip: true); // Bug A6 (CircularDependencyError): corrigido na tarefa 1.12
+  });
 
+  group('streak global (bug A6)', () {
+    // O banner é um RichText: "N dia(s)  ·  melhor: M dia(s)".
+    Finder banner(String text) => find.textContaining(text, findRichText: true);
+
+    testWidgets('atualiza depois de marcar um hábito', (tester) async {
+      await insertHabit('h1', 'Meditar');
+      await pumpDashboard(tester);
+      expect(banner('0 dias  ·  melhor: 0 dias'), findsOneWidget);
+
+      await tester.tap(find.text('Meditar'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(banner('1 dia  ·  melhor: 1 dia'), findsOneWidget);
+    });
+
+    testWidgets('atualiza depois de eliminar um hábito', (tester) async {
+      await insertHabit('h1', 'Meditar');
+      await db.setYesNoCompletion('h1', HabitDateUtils.todayKey(), true);
+      await pumpDashboard(tester);
+      expect(banner('1 dia  ·  melhor: 1 dia'), findsOneWidget);
+
+      await tester.drag(find.byType(Dismissible), const Offset(-600, 0));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(banner('0 dias  ·  melhor: 0 dias'), findsOneWidget);
+    });
+  });
 }

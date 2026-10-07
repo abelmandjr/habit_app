@@ -83,10 +83,12 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
         await _repo.setQuantitativeForDate(item.habit.id, dateKey, quantity);
       }
 
-      _ref.invalidate(globalStreakProvider);
       await _ref
           .read(habitDetailNotifierProvider(item.habit.id).notifier)
           .refresh();
+      // Não invalidar globalStreakProvider aqui: ele observa esta lista e
+      // recalcula-se quando o load publica o novo estado. Invalidá-lo a partir
+      // deste notifier é uma dependência circular (bug A6).
       if (isToday) {
         await load(silent: true);
       }
@@ -145,7 +147,6 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
       state = previous;
       rethrow;
     }
-    _ref.invalidate(globalStreakProvider);
     await load(silent: true);
   }
 }
