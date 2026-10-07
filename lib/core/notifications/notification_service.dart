@@ -129,6 +129,33 @@ class NotificationService {
     }
   }
 
+  /// Próxima ocorrência de [hour]:[minute] no fuso de [now] (hoje, ou amanhã
+  /// se já passou). Avança por campos de calendário e não somando 24 h: num
+  /// dia com mudança de hora, somar 24 h daria uma hora a mais ou a menos.
+  static tz.TZDateTime nextInstanceOf(
+    tz.TZDateTime now,
+    int hour,
+    int minute,
+  ) {
+    final today = tz.TZDateTime(
+      now.location,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+    if (!today.isBefore(now)) return today;
+    return tz.TZDateTime(
+      now.location,
+      now.year,
+      now.month,
+      now.day + 1,
+      hour,
+      minute,
+    );
+  }
+
   int notificationIdForHabit(String habitId) =>
       habitId.hashCode.abs() % 2147483647;
 
@@ -139,19 +166,11 @@ class NotificationService {
     final id = notificationIdForHabit(habit.id);
     await cancelHabitReminder(habit.id);
 
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
+    final scheduled = nextInstanceOf(
+      tz.TZDateTime.now(tz.local),
       habit.reminderHour!,
       habit.reminderMinute!,
     );
-
-    if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
-    }
 
     const androidDetails = AndroidNotificationDetails(
       'habit_reminders',

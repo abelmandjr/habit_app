@@ -71,37 +71,40 @@ class QuantitativeHabitReport {
 class HabitReportCalculator {
   HabitReportCalculator._();
 
-  static int trackedDaysSince(DateTime createdAt) {
-    final start = HabitDateUtils.startOfDay(createdAt);
-    final today = HabitDateUtils.startOfDay(clock.now());
-    return today.difference(start).inDays + 1;
-  }
+  /// Chave do dia de início do hábito. Até à v5 (coluna `startDate`, tarefa
+  /// 3.4), a data de início é o dia de criação.
+  static String startKeyOf(HabitData habit) =>
+      HabitDateUtils.dateKey(habit.createdAt);
 
-  static Iterable<DateTime> daysFromCreation(DateTime createdAt) {
-    final start = HabitDateUtils.startOfDay(createdAt);
-    final today = HabitDateUtils.startOfDay(clock.now());
-    final count = today.difference(start).inDays + 1;
-    return List.generate(
-      count,
-      (i) => start.add(Duration(days: i)),
-    );
-  }
+  /// Dias de calendário desde o início até hoje, inclusive.
+  static int trackedDaysSince(DateTime createdAt) =>
+      HabitDateUtils.daysBetween(createdAt, clock.now()) + 1;
+
+  static Set<String> _fromStart(Set<String> dates, String startKey) =>
+      dates.where((d) => d.compareTo(startKey) >= 0).toSet();
 
   static YesNoHabitReport buildYesNoReport({
     required HabitData habit,
     required Set<String> completionDates,
   }) {
+    final dates = _fromStart(completionDates, startKeyOf(habit));
     final tracked = trackedDaysSince(habit.createdAt);
-    final done = completionDates.length;
-    final failed = (tracked - done).clamp(0, tracked);
-    final rate = tracked == 0 ? 0.0 : (done / tracked) * 100;
+    final doneToday = dates.contains(HabitDateUtils.todayKey());
+
+    // Hoje só conta (como feito) se já estiver feito; por fazer ainda não é
+    // uma falha.
+    final pastDays = (tracked - 1).clamp(0, tracked);
+    final donePast = dates.length - (doneToday ? 1 : 0);
+    final failed = (pastDays - donePast).clamp(0, pastDays);
+    final evaluated = pastDays + (doneToday ? 1 : 0);
+    final rate = evaluated == 0 ? 0.0 : (dates.length / evaluated) * 100;
 
     return YesNoHabitReport(
-      daysDone: done,
+      daysDone: dates.length,
       daysFailed: failed,
       successRate: rate,
-      streak: StreakCalculator.compute(completionDates),
-      completionDates: completionDates,
+      streak: StreakCalculator.compute(dates),
+      completionDates: dates,
       trackedDays: tracked,
     );
   }
@@ -112,8 +115,11 @@ class HabitReportCalculator {
     required Set<String> goalMetDates,
   }) {
     final todayKey = HabitDateUtils.todayKey();
+    final startKey = startKeyOf(habit);
+    goalMetDates = _fromStart(goalMetDates, startKey);
     final rowsWithValue = completions
         .where((c) => (c.loggedValue ?? 0) > 0)
+        .where((c) => c.date.compareTo(startKey) >= 0)
         .toList()
       ..sort((a, b) => a.date.compareTo(b.date));
 
@@ -186,37 +192,24 @@ class HabitReportCalculator {
           [row.date] = row;
     }
 
+    // Percorre os dias por chave (YYYY-MM-DD): cada passo é exatamente um dia
+    // de calendário, mesmo com mudanças de hora (bug M10).
     final successDays = <String>{};
-    final earliest = habits
-        .map((h) => HabitDateUtils.startOfDay(h.createdAt))
-        .reduce((a, b) => a.isBefore(b) ? a : b);
-    final today = HabitDateUtils.startOfDay(clock.now());
-    var cursor = earliest;
+    final starts = {for (final h in habits) h.id: startKeyOf(h)};
+    final earliest = starts.values.reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
+    final today = HabitDateUtils.todayKey();
 
-    while (!cursor.isAfter(today)) {
-      final key = HabitDateUtils.dateKey(cursor);
-      final activeHabits = habits.where((h) {
-        final created = HabitDateUtils.startOfDay(h.createdAt);
-        return !created.isAfter(cursor);
-      });
+    for (var key = earliest;
+        key.compareTo(today) <= 0;
+        key = HabitDateUtils.addDays(key, 1)) {
+      final activeHabits =
+          habits.where((h) => starts[h.id]!.compareTo(key) <= 0);
+      if (activeHabits.isEmpty) continue;
 
-      if (activeHabits.isEmpty) {
-        cursor = cursor.add(const Duration(days: 1));
-        continue;
-      }
-
-      var allMet = true;
-      for (final habit in activeHabits) {
-        final row = completionsByHabit[habit.id]?[key];
-        final met = _isGoalMetSync(habit, row);
-        if (!met) {
-          allMet = false;
-          break;
-        }
-      }
-
+      final allMet = activeHabits.every(
+        (habit) => _isGoalMetSync(habit, completionsByHabit[habit.id]?[key]),
+      );
       if (allMet) successDays.add(key);
-      cursor = cursor.add(const Duration(days: 1));
     }
 
     final streak = StreakCalculator.compute(successDays);

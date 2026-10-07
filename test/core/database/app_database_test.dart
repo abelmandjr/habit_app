@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:habit_app/core/database/app_database.dart';
@@ -68,6 +69,24 @@ void main() {
     final second = AppDatabase(NativeDatabase(file));
     addTearDown(second.close);
     expect(await second.getAllHabits(), hasLength(1));
+  });
+
+  test('registos anteriores à data de início não contam (tarefa 1.6)', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await db.insertHabit(
+      HabitsCompanion.insert(
+        id: 'h1',
+        title: 'Meditar',
+        category: 'Geral',
+        createdAt: Value(DateTime(2026, 6, 10)),
+      ),
+    );
+    await db.setYesNoCompletion('h1', '2026-06-05', true);
+    await db.setYesNoCompletion('h1', '2026-06-12', true);
+
+    expect(await db.getCompletionDates('h1'), {'2026-06-12'});
+    expect((await db.getStreakStats('h1')).totalCompletions, 1);
   });
 
   group('chaves estrangeiras', () {

@@ -1,5 +1,3 @@
-import 'package:clock/clock.dart';
-
 import 'date_utils.dart';
 
 class StreakStats {
@@ -19,8 +17,14 @@ class StreakStats {
 class StreakCalculator {
   StreakCalculator._();
 
-  static StreakStats compute(Set<String> completionDates) {
-    if (completionDates.isEmpty) {
+  /// Calcula as sequências a partir das chaves `YYYY-MM-DD` dos dias feitos.
+  /// Com [startKey], os dias anteriores à data de início são ignorados.
+  static StreakStats compute(Set<String> completionDates, {String? startKey}) {
+    final dates = startKey == null
+        ? completionDates
+        : completionDates.where((d) => d.compareTo(startKey) >= 0).toSet();
+
+    if (dates.isEmpty) {
       return const StreakStats(
         currentStreak: 0,
         bestStreak: 0,
@@ -30,38 +34,31 @@ class StreakCalculator {
     }
 
     final today = HabitDateUtils.todayKey();
-    final completedToday = completionDates.contains(today);
 
     return StreakStats(
-      currentStreak: _currentStreak(completionDates),
-      bestStreak: _bestStreak(completionDates),
-      completedToday: completedToday,
-      totalCompletions: completionDates.length,
+      currentStreak: _currentStreak(dates, today),
+      bestStreak: _bestStreak(dates),
+      completedToday: dates.contains(today),
+      totalCompletions: dates.length,
     );
   }
 
-  static int _currentStreak(Set<String> dates) {
-    var cursor = HabitDateUtils.startOfDay(clock.now());
-    final todayKey = HabitDateUtils.dateKey(cursor);
-
-    if (!dates.contains(todayKey)) {
-      cursor = cursor.subtract(const Duration(days: 1));
-      if (!dates.contains(HabitDateUtils.dateKey(cursor))) {
-        return 0;
-      }
-    }
+  /// Hoje ainda por fazer não quebra a sequência que termina ontem.
+  static int _currentStreak(Set<String> dates, String today) {
+    var cursor = dates.contains(today) ? today : HabitDateUtils.addDays(today, -1);
 
     var streak = 0;
-    while (dates.contains(HabitDateUtils.dateKey(cursor))) {
+    while (dates.contains(cursor)) {
       streak++;
-      cursor = cursor.subtract(const Duration(days: 1));
+      cursor = HabitDateUtils.addDays(cursor, -1);
     }
     return streak;
   }
 
   static int _bestStreak(Set<String> dates) {
-    final sorted = dates.map(HabitDateUtils.parseKey).toList()
-      ..sort((a, b) => a.compareTo(b));
+    // parseKey devolve dias em UTC: a diferença entre dias seguidos é sempre
+    // exatamente 1, mesmo quando há mudança de hora (bug M10).
+    final sorted = dates.map(HabitDateUtils.parseKey).toList()..sort();
 
     var best = 1;
     var current = 1;
@@ -76,6 +73,6 @@ class StreakCalculator {
       }
     }
 
-    return dates.length == 1 ? 1 : best;
+    return best;
   }
 }

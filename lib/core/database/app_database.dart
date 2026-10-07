@@ -243,8 +243,11 @@ class AppDatabase extends _$AppDatabase {
           ..where((t) => t.habitId.equals(habitId)))
         .get();
 
+    // Registos anteriores à data de início não contam (decisão 7).
+    final startKey = HabitDateUtils.dateKey(habit.createdAt);
     final dates = <String>{};
     for (final row in rows) {
+      if (row.date.compareTo(startKey) < 0) continue;
       if (await isGoalMet(habit, row)) {
         dates.add(row.date);
       }

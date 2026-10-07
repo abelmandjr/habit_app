@@ -9,9 +9,9 @@ void main() {
       expect(HabitDateUtils.dateKey(DateTime(2026, 3, 5, 23, 59)), '2026-03-05');
     });
 
-    test('parseKey é o inverso de dateKey', () {
+    test('parseKey é o inverso de dateKey e devolve o dia em UTC', () {
       final date = HabitDateUtils.parseKey('2026-12-31');
-      expect(date, DateTime(2026, 12, 31));
+      expect(date, DateTime.utc(2026, 12, 31));
       expect(HabitDateUtils.dateKey(date), '2026-12-31');
     });
 
