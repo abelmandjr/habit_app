@@ -1,4 +1,4 @@
-package com.example.habit_app
+package com.abelmandjr.habitapp
 
 import io.flutter.embedding.android.FlutterActivity
 

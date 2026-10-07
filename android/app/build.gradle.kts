@@ -5,17 +5,17 @@ plugins {
 }
 
 android {
-    namespace = "com.example.habit_app"
+    namespace = "com.abelmandjr.habitapp"
 
     compileSdk = flutter.compileSdkVersion
 
     defaultConfig {
-        applicationId = "com.example.habit_app"
+        applicationId = "com.abelmandjr.habitapp"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        manifestPlaceholders["appLabel"] = "habit_app"
+        manifestPlaceholders["appLabel"] = "Hábitos"
     }
 
     compileOptions {
@@ -25,11 +25,11 @@ android {
     }
 
     buildTypes {
-        // A app de debug (com.example.habit_app.debug) convive no telemóvel
-        // com a de release (com.example.habit_app).
+        // A app de debug (com.abelmandjr.habitapp.debug) convive no telemóvel
+        // com a de release (com.abelmandjr.habitapp).
         debug {
             applicationIdSuffix = ".debug"
-            manifestPlaceholders["appLabel"] = "habit_app (debug)"
+            manifestPlaceholders["appLabel"] = "Hábitos (debug)"
         }
         release {
             signingConfig = signingConfigs.getByName("debug")

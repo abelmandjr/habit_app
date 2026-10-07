@@ -216,7 +216,7 @@ Tabela chave/valor. Contém `user_name` e `custom_categories` (lista separada po
 | B5 | `HabitFormState.copyWith` não consegue voltar a pôr `reminderTime` a `null` | `habit_provider.dart:401-433` |
 | B6 | `HabitDetailPage` faz `ref.watch(habitListProvider)` sem necessidade, o que provoca *rebuilds* extra | [habit_detail_page.dart:17](lib/features/habits/presentation/pages/habit_detail_page.dart#L17) |
 | B7 | Tocar na notificação não abre o hábito (`onDidReceiveNotificationResponse: (_) {}`) | `notification_service.dart:38` |
-| B8 | Identidade da app por definir: `com.example.habit_app`, label `habit_app`, descrição "A new Flutter project." | `android/app/build.gradle*`, `AndroidManifest.xml`, `pubspec.yaml` |
+| B8 ✅ | *(resolvido na 2.9: `com.abelmandjr.habitapp`, "Hábitos")* Identidade da app por definir: `com.example.habit_app`, label `habit_app`, descrição "A new Flutter project." | `android/app/build.gradle*`, `AndroidManifest.xml`, `pubspec.yaml` |
 | B9 | Ficheiros residuais: `ficheiroaa.bat` e pastas `assets/` vazias | raiz |
 | B10 | `habit_provider.dart` tem 587 linhas com 3 notifiers e 2 estados, e deve ser dividido. O `StreakCard` repete a animação a cada registo. | — |
 
@@ -281,7 +281,7 @@ Reorganizada a 2026-10-07. **Ordem de execução:** 2.8 → 2.9 → 2.6 → 2.3 
 | # | Tarefa | Esforço | Depende de |
 |---|---|---|---|
 | 2.8 ✅ | **(nova, decisão 16)** CI com o runner fixo em `ubuntu-24.04`. *(Concluída em 2026-10-07.)* | P | — |
-| 2.9 ⬜ | **(nova, decisão 17)** Identidade: `applicationId` `com.abelmandjr.habitapp` (+ `.debug`), `namespace` e pacote Kotlin do `MainActivity`, nome visível "Hábitos". Feita já porque custa meio dia, evita reinstalar a app mais tarde e o login Google (4.2) é configurado com o nome do pacote. | P | — |
+| 2.9 ✅ | **(nova, decisão 17)** Identidade: `com.abelmandjr.habitapp` (debug: `.debug`), `namespace` e `MainActivity` no pacote Kotlin novo, nome visível "Hábitos" ("Hábitos (debug)"). *(Concluída em 2026-10-07. Confirmado com `aapt dump badging` nos dois APKs. O fluxo no dispositivo passa com o pacote novo. Não mudaram o nome do pacote Dart (`habit_app`), que obrigaria a reescrever todos os imports, nem o `ios/` (decisão 2).)* | P | — |
 | 2.6 ⬜ | Dependências (decisão 15): go_router e flutter_local_notifications para a versão major mais recente, `flutter_timezone` sem o Kotlin Gradle Plugin (ou alternativa mantida), Riverpod 2 mantido. Inclui **remover as dependências não usadas** (`google_fonts`, `cupertino_icons`, `path_provider` se continuar sem uso), que vinha da 2.5. | M | 1.5 |
 | 2.3 ⬜ | ARB (`flutter_localizations` + `intl` `pt_PT`) e textos uniformizados em PT-PT com **"tu"** (decisão 12). Centraliza datas e números. | M | — |
 | 2.1 ⬜ | **Camada de domínio** com `freezed` (decisão 14): entidades próprias separadas das classes do Drift, repositórios com interface, uma única regra de "meta cumprida", `habit_provider.dart` dividido, `autoDispose` no detalhe. Resolve o M7 e o M8. | G | 1.5 |
@@ -478,16 +478,16 @@ Os testes de integração estão em `integration_test/`. O teste do fluxo usa um
 ### Como correr (forma padrão)
 
 **Regra do projeto: os testes de integração correm sempre com `--no-uninstall`.**
-Desde a `fase-1c`, a build de debug usa o pacote **`com.example.habit_app.debug`** e chama-se "habit_app (debug)", por isso convive no telemóvel com a de release (`com.example.habit_app`). Os resultados abaixo, de antes dessa mudança, mostram ainda o nome antigo. Os testes unitários (`flutter test test/`) não precisam de dispositivo e são os que a CI corre.
+Desde a 2.9, a app chama-se **"Hábitos"** e usa o pacote **`com.abelmandjr.habitapp`**. A build de debug é **`com.abelmandjr.habitapp.debug`** ("Hábitos (debug)") e convive no telemóvel com a de release. Os resultados abaixo, de antes destas mudanças, mostram ainda os nomes antigos (`com.example.habit_app`). Os testes unitários (`flutter test test/`) não precisam de dispositivo e são os que a CI corre.
 
 ```bash
 ADB="$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"
 "$ADB" devices -l                                   # R5CN20X9KPP device model:SM_G986U
-"$ADB" -s R5CN20X9KPP shell pm grant --user 0 com.example.habit_app.debug android.permission.POST_NOTIFICATIONS
+"$ADB" -s R5CN20X9KPP shell pm grant --user 0 com.abelmandjr.habitapp.debug android.permission.POST_NOTIFICATIONS
 flutter test --no-uninstall integration_test/habit_flow_test.dart          -d R5CN20X9KPP
 flutter test --no-uninstall integration_test/reminder_test.dart            -d R5CN20X9KPP
 # Precisa de orquestração com adb (ver a secção da 1.10 mais abaixo):
-"$ADB" -s R5CN20X9KPP shell appops set com.example.habit_app.debug SCHEDULE_EXACT_ALARM deny
+"$ADB" -s R5CN20X9KPP shell appops set com.abelmandjr.habitapp.debug SCHEDULE_EXACT_ALARM deny
 flutter test --no-uninstall integration_test/exact_alarm_resume_test.dart  -d R5CN20X9KPP
 ```
 
