@@ -1,9 +1,47 @@
+import 'package:habit_app/core/database/app_database.dart';
 import 'package:habit_app/core/models/habit_type.dart';
 import 'package:habit_app/core/notifications/notification_service.dart';
 import 'package:habit_app/features/habits/data/repositories/habit_repository_impl.dart';
 
 /// Evita chamadas ao plugin nativo de notificações nos testes.
 class FakeNotifications implements NotificationService {
+  FakeNotifications({
+    this.permissionGranted = true,
+    this.exactAlarmsAllowed = true,
+    this.exactAlarmsAllowedAfterSettings,
+  });
+
+  /// Resposta simulada ao pedido de permissão de notificações.
+  final bool permissionGranted;
+  int permissionRequests = 0;
+
+  /// Estado simulado de "Alarmes e lembretes" (SCHEDULE_EXACT_ALARM).
+  bool exactAlarmsAllowed;
+
+  /// Estado depois de "abrir as definições" (por omissão, não muda).
+  final bool? exactAlarmsAllowedAfterSettings;
+  int exactAlarmSettingsOpened = 0;
+
+  @override
+  Future<bool> requestPermission() async {
+    permissionRequests++;
+    return permissionGranted;
+  }
+
+  @override
+  Future<bool> canScheduleExactAlarms() async => exactAlarmsAllowed;
+
+  @override
+  Future<bool> syncExactAlarmPermission(AppDatabase db) async =>
+      exactAlarmsAllowed;
+
+  @override
+  Future<bool> openExactAlarmSettings() async {
+    exactAlarmSettingsOpened++;
+    exactAlarmsAllowed = exactAlarmsAllowedAfterSettings ?? exactAlarmsAllowed;
+    return exactAlarmsAllowed;
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => Future<void>.value();
 }

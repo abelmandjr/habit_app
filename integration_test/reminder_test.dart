@@ -47,18 +47,22 @@ void main() {
               AndroidFlutterLocalNotificationsPlugin>()!;
 
       try {
+        final exact = await service.canScheduleExactAlarms();
         await service.syncHabitReminder(habit);
 
         // ignore: avoid_print
         print('IT_REMINDER scheduled id=$id tz=${tz.local.name} '
-            'now=$now target=$target');
+            'exact=$exact now=$now target=$target');
 
         final pending = await FlutterLocalNotificationsPlugin()
             .pendingNotificationRequests();
         expect(pending.map((p) => p.id), contains(id));
 
-        // Espera pela notificação até 90 s depois da hora marcada.
-        const maxDelay = Duration(seconds: 90);
+        // Exato: chega à hora. Inexato: o Android pode atrasar até 75 % do
+        // tempo que faltava quando foi agendado (ver ANALISE_PROJETO.md §9).
+        final maxDelay = exact
+            ? const Duration(seconds: 15)
+            : target.difference(now) * 0.75 + const Duration(seconds: 20);
         final deadline = target.add(maxDelay);
         DateTime? arrivedAt;
         while (DateTime.now().isBefore(deadline)) {
