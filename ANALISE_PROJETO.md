@@ -459,16 +459,17 @@ Os testes de integração estão em `integration_test/`. O teste do fluxo usa um
 
 ### Como correr (forma padrão)
 
-**Regra do projeto: os testes de integração correm sempre com `--no-uninstall`.** Os testes unitários (`flutter test test/`) não precisam de dispositivo e são os que a CI corre.
+**Regra do projeto: os testes de integração correm sempre com `--no-uninstall`.**
+Desde a `fase-1c`, a build de debug usa o pacote **`com.example.habit_app.debug`** e chama-se "habit_app (debug)", por isso convive no telemóvel com a de release (`com.example.habit_app`). Os resultados abaixo, de antes dessa mudança, mostram ainda o nome antigo. Os testes unitários (`flutter test test/`) não precisam de dispositivo e são os que a CI corre.
 
 ```bash
 ADB="$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"
 "$ADB" devices -l                                   # R5CN20X9KPP device model:SM_G986U
-"$ADB" -s R5CN20X9KPP shell pm grant --user 0 com.example.habit_app android.permission.POST_NOTIFICATIONS
+"$ADB" -s R5CN20X9KPP shell pm grant --user 0 com.example.habit_app.debug android.permission.POST_NOTIFICATIONS
 flutter test --no-uninstall integration_test/habit_flow_test.dart          -d R5CN20X9KPP
 flutter test --no-uninstall integration_test/reminder_test.dart            -d R5CN20X9KPP
 # Precisa de orquestração com adb (ver a secção da 1.10 mais abaixo):
-"$ADB" -s R5CN20X9KPP shell appops set com.example.habit_app SCHEDULE_EXACT_ALARM deny
+"$ADB" -s R5CN20X9KPP shell appops set com.example.habit_app.debug SCHEDULE_EXACT_ALARM deny
 flutter test --no-uninstall integration_test/exact_alarm_resume_test.dart  -d R5CN20X9KPP
 ```
 
