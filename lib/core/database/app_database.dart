@@ -51,7 +51,9 @@ class AppSettings extends Table {
 
 @DriftDatabase(tables: [Habits, HabitCompletions, AppSettings])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(driftDatabase(name: 'habits'));
+  /// [executor] permite usar uma BD em memória nos testes.
+  AppDatabase([QueryExecutor? executor])
+      : super(executor ?? driftDatabase(name: 'habits'));
 
   @override
   int get schemaVersion => 4;

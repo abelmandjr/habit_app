@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/habit_type.dart';
+import '../../../../core/notifications/notification_service.dart';
 import '../../../../core/storage/user_settings_service.dart';
+import '../../../../core/widgets/error_feedback.dart';
 import '../providers/habit_provider.dart';
 
 class HabitFormPage extends ConsumerStatefulWidget {
@@ -32,10 +36,20 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
     _unitController = TextEditingController();
 
     if (widget.habitId != null) {
-      Future.microtask(() async {
-        await ref.read(habitFormProvider.notifier).loadForEdit(widget.habitId!);
-        _syncControllers();
-      });
+      unawaited(Future.microtask(() async {
+        if (!mounted) return;
+        final loaded = await runWithErrorFeedback(
+          context,
+          () => ref.read(habitFormProvider.notifier).loadForEdit(widget.habitId!),
+          message: ErrorMessages.loadHabit,
+        );
+        if (!mounted) return;
+        if (loaded) {
+          _syncControllers();
+        } else {
+          context.pop();
+        }
+      }));
     }
   }
 
@@ -251,15 +265,7 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
             title: const Text('Lembrete diário'),
             subtitle: const Text('Notificação no horário escolhido'),
             value: form.reminderEnabled,
-            onChanged: (v) {
-              ref.read(habitFormProvider.notifier).updateReminderEnabled(v);
-              if (v && form.reminderTime == null) {
-                final now = DateTime.now();
-                ref.read(habitFormProvider.notifier).updateReminderTime(
-                      DateTime(now.year, now.month, now.day, 9, 0),
-                    );
-              }
-            },
+            onChanged: _onReminderToggled,
           ),
           if (form.reminderEnabled)
             ListTile(
@@ -290,6 +296,9 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
                 }
               },
             ),
+          if (form.reminderEnabled &&
+              ref.watch(exactAlarmsAllowedProvider).valueOrNull == false)
+            _InexactReminderWarning(onOpenSettings: _openExactAlarmSettings),
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: form.isSaving ? null : _save,
@@ -305,6 +314,93 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
         ],
       ),
     );
+  }
+
+  /// A permissão de notificações só é pedida quando se liga um lembrete.
+  Future<void> _onReminderToggled(bool enabled) async {
+    final notifier = ref.read(habitFormProvider.notifier);
+    if (!enabled) {
+      notifier.updateReminderEnabled(false);
+      return;
+    }
+
+    var granted = false;
+    await runWithErrorFeedback(
+      context,
+      () async => granted =
+          await ref.read(notificationServiceProvider).requestPermission(),
+      message: 'Não foi possível pedir permissão para notificações.',
+    );
+    if (!mounted) return;
+    if (!granted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Sem permissão para notificações. Ativa-a nas definições do '
+            'telemóvel para receberes lembretes.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    notifier.updateReminderEnabled(true);
+    if (ref.read(habitFormProvider).reminderTime == null) {
+      final now = DateTime.now();
+      notifier.updateReminderTime(DateTime(now.year, now.month, now.day, 9, 0));
+    }
+
+    await _askForExactAlarms();
+  }
+
+  /// Sem alarmes exatos, o lembrete fica ligado em modo inexato e o
+  /// formulário mostra um aviso (ver _InexactReminderWarning).
+  Future<void> _askForExactAlarms() async {
+    final service = ref.read(notificationServiceProvider);
+    var allowed = true;
+    await runWithErrorFeedback(
+      context,
+      () async => allowed = await service.canScheduleExactAlarms(),
+      message: 'Não foi possível verificar a permissão de alarmes.',
+    );
+    if (allowed || !mounted) return;
+
+    final open = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Lembretes à hora certa'),
+        content: const Text(
+          'Para os lembretes chegarem à hora exata, permite "Alarmes e '
+          'lembretes" nas definições da app. Sem isso, o Android pode '
+          'atrasá-los.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Agora não'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Abrir definições'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (open == true) {
+      await _openExactAlarmSettings();
+    } else {
+      ref.invalidate(exactAlarmsAllowedProvider);
+    }
+  }
+
+  Future<void> _openExactAlarmSettings() async {
+    await runWithErrorFeedback(
+      context,
+      () => ref.read(notificationServiceProvider).openExactAlarmSettings(),
+      message: 'Não foi possível abrir as definições.',
+    );
+    if (mounted) ref.invalidate(exactAlarmsAllowedProvider);
   }
 
   String _formatTime(DateTime t) {
@@ -323,8 +419,13 @@ class _HabitFormPageState extends ConsumerState<HabitFormPage> {
         .updateCustomCategory(_customCategoryController.text);
     ref.read(habitFormProvider.notifier).updateUnit(_unitController.text);
 
-    final ok = await ref.read(habitFormProvider.notifier).save();
-    if (!mounted) return;
+    var ok = false;
+    final saved = await runWithErrorFeedback(
+      context,
+      () async => ok = await ref.read(habitFormProvider.notifier).save(),
+      message: ErrorMessages.saveHabit,
+    );
+    if (!saved || !mounted) return;
 
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -397,6 +498,57 @@ class _TypeCard extends StatelessWidget {
               const Icon(Icons.chevron_right_rounded),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Aviso mostrado quando o lembrete está ligado mas a app não pode agendar
+/// alarmes exatos ("Alarmes e lembretes" desligado).
+class _InexactReminderWarning extends StatelessWidget {
+  const _InexactReminderWarning({required this.onOpenSettings});
+
+  final VoidCallback onOpenSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      color: theme.colorScheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: theme.colorScheme.onErrorContainer,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Os lembretes podem chegar atrasados: a app não tem '
+                    'permissão para alarmes exatos.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: onOpenSettings,
+                child: const Text('Abrir definições'),
+              ),
+            ),
+          ],
         ),
       ),
     );

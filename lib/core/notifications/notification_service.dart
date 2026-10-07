@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -8,6 +9,12 @@ import '../database/app_database.dart';
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService.instance;
+});
+
+/// Estado da permissão de alarmes exatos, para a UI. É invalidado quando a
+/// app volta ao primeiro plano e depois de abrir as definições.
+final exactAlarmsAllowedProvider = FutureProvider.autoDispose<bool>((ref) {
+  return ref.watch(notificationServiceProvider).canScheduleExactAlarms();
 });
 
 class NotificationService {
@@ -24,13 +31,15 @@ class NotificationService {
     if (_initialized) return;
 
     tz.initializeTimeZones();
-    tz.setLocalLocation(tz.local);
+    await _configureLocalTimezone();
 
+    // As permissões não são pedidas no arranque: só quando o utilizador liga
+    // o primeiro lembrete (ver requestPermission).
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
 
     await _plugin.initialize(
@@ -38,15 +47,78 @@ class NotificationService {
       onDidReceiveNotificationResponse: (_) {},
     );
 
-    if (!kIsWeb) {
-      final androidPlugin =
-          _plugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
-      await androidPlugin?.requestNotificationsPermission();
-      await androidPlugin?.requestExactAlarmsPermission();
+    _lastExactAllowed = await canScheduleExactAlarms();
+    _initialized = true;
+  }
+
+  /// Pede permissão para mostrar notificações (Android 13+ / iOS).
+  /// Devolve `true` se as notificações estiverem autorizadas.
+  Future<bool> requestPermission() async {
+    final android = _android;
+    if (android != null) {
+      final granted = await android.requestNotificationsPermission();
+      return granted ?? await android.areNotificationsEnabled() ?? true;
     }
 
-    _initialized = true;
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) {
+      final granted = await ios.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      return granted ?? false;
+    }
+
+    return true;
+  }
+
+  /// Sem isto, `tz.local` fica em UTC e os lembretes disparam à hora errada.
+  Future<void> _configureLocalTimezone() async {
+    try {
+      final info = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(info.identifier));
+    } catch (e) {
+      debugPrint('Fuso horário local indisponível, a usar UTC: $e');
+    }
+  }
+
+  AndroidFlutterLocalNotificationsPlugin? get _android =>
+      _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+
+  /// Se a app pode agendar alarmes exatos (SCHEDULE_EXACT_ALARM, que no
+  /// Android 14+ vem desligada por omissão). Fora do Android devolve `true`.
+  Future<bool> canScheduleExactAlarms() async {
+    final android = _android;
+    if (android == null) return true;
+    return await android.canScheduleExactNotifications() ?? false;
+  }
+
+  /// Abre as definições "Alarmes e lembretes" da app e devolve o estado da
+  /// permissão depois de o utilizador voltar.
+  Future<bool> openExactAlarmSettings() async {
+    await _android?.requestExactAlarmsPermission();
+    return canScheduleExactAlarms();
+  }
+
+  bool? _lastExactAllowed;
+
+  /// Último estado conhecido de "Alarmes e lembretes" (atualizado ao iniciar
+  /// e em [syncExactAlarmPermission]).
+  bool? get lastKnownExactAlarmsAllowed => _lastExactAllowed;
+
+  /// Verifica se a permissão de alarmes exatos mudou desde a última vez e,
+  /// se mudou, reagenda todos os lembretes no modo certo. Devolve o estado.
+  Future<bool> syncExactAlarmPermission(AppDatabase db) async {
+    final allowed = await canScheduleExactAlarms();
+    final previous = _lastExactAllowed;
+    _lastExactAllowed = allowed;
+    if (previous != null && previous != allowed) {
+      await rescheduleAll(db);
+    }
+    return allowed;
   }
 
   Future<void> rescheduleAll(AppDatabase db) async {
@@ -100,7 +172,11 @@ class NotificationService {
       body: habit.title,
       scheduledDate: scheduled,
       notificationDetails: details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      // Exato só com SCHEDULE_EXACT_ALARM concedida pelo utilizador. Sem ela,
+      // o Android pode atrasar o alarme até 75 % do tempo que falta para ele.
+      androidScheduleMode: await canScheduleExactAlarms()
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }

@@ -1,3 +1,5 @@
+import 'package:clock/clock.dart';
+
 import 'date_utils.dart';
 
 class StreakStats {
@@ -39,7 +41,7 @@ class StreakCalculator {
   }
 
   static int _currentStreak(Set<String> dates) {
-    var cursor = HabitDateUtils.startOfDay(DateTime.now());
+    var cursor = HabitDateUtils.startOfDay(clock.now());
     final todayKey = HabitDateUtils.dateKey(cursor);
 
     if (!dates.contains(todayKey)) {

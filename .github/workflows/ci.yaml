@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.0
+          channel: stable
+          cache: true
+
+      # Os testes usam o Drift com SQLite nativo (NativeDatabase.memory).
+      - name: Instalar SQLite
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+
+      - name: Dependências
+        run: flutter pub get
+
+      - name: Análise
+        run: flutter analyze
+
+      # Só test/: os de integration_test/ precisam de um dispositivo.
+      - name: Testes
+        run: flutter test test/
+
+      # Rede de segurança para o bug M10: num fuso com hora de verão, as contas
+      # de dias não podem depender da hora local.
+      - name: Testes (TZ=Europe/Lisbon)
+        run: flutter test test/
+        env:
+          TZ: Europe/Lisbon

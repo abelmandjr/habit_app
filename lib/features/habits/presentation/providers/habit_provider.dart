@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -30,7 +33,7 @@ final globalStreakProvider = FutureProvider<GlobalStreakStats>((ref) async {
 
 class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> {
   HabitListNotifier(this._ref) : super(const AsyncLoading()) {
-    load();
+    unawaited(load());
   }
 
   final Ref _ref;
@@ -45,16 +48,26 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
     try {
       final data = await _repo.getHabitsWithTodayStatus();
       state = AsyncData(data);
-
-      if (!_remindersSynced) {
-        _remindersSynced = true;
-        final habits = await _ref.read(dbProvider).getAllHabits();
-        for (final habit in habits) {
-          await _notifications.syncHabitReminder(habit);
-        }
-      }
     } catch (e, st) {
       state = AsyncError(e, st);
+      return;
+    }
+
+    if (!_remindersSynced) {
+      _remindersSynced = true;
+      await _syncReminders();
+    }
+  }
+
+  /// Uma falha nas notificações não deve deixar a lista em estado de erro.
+  Future<void> _syncReminders() async {
+    try {
+      final habits = await _ref.read(dbProvider).getAllHabits();
+      for (final habit in habits) {
+        await _notifications.syncHabitReminder(habit);
+      }
+    } catch (e, st) {
+      debugPrint('Falha ao reagendar lembretes: $e\n$st');
     }
   }
 
@@ -83,15 +96,21 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
         await _repo.setQuantitativeForDate(item.habit.id, dateKey, quantity);
       }
 
-      _ref.invalidate(globalStreakProvider);
       await _ref
           .read(habitDetailNotifierProvider(item.habit.id).notifier)
           .refresh();
+      // Não invalidar globalStreakProvider aqui: ele observa esta lista e
+      // recalcula-se quando o load publica o novo estado. Invalidá-lo a partir
+      // deste notifier é uma dependência circular (bug A6).
       if (isToday) {
         await load(silent: true);
       }
     } catch (e) {
+      // Repõe o que está na BD, desfazendo as atualizações otimistas.
       if (isToday) await load(silent: true);
+      await _ref
+          .read(habitDetailNotifierProvider(item.habit.id).notifier)
+          .refresh();
       rethrow;
     }
   }
@@ -130,9 +149,21 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
   }
 
   Future<void> deleteHabit(String id) async {
-    await _notifications.cancelHabitReminder(id);
-    await _repo.deleteHabit(id);
-    _ref.invalidate(globalStreakProvider);
+    // Remove do estado antes de qualquer await: o Dismissible exige que o
+    // item saia da árvore no mesmo frame em que é dispensado.
+    final previous = state;
+    final current = state.valueOrNull;
+    if (current != null) {
+      state = AsyncData(current.where((h) => h.habit.id != id).toList());
+    }
+
+    try {
+      await _notifications.cancelHabitReminder(id);
+      await _repo.deleteHabit(id);
+    } catch (_) {
+      state = previous;
+      rethrow;
+    }
     await load(silent: true);
   }
 }
@@ -144,7 +175,7 @@ final habitDetailNotifierProvider = StateNotifierProvider.family<
 
 class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
   HabitDetailNotifier(this._ref, this._habitId) : super(const AsyncLoading()) {
-    refresh();
+    unawaited(refresh());
   }
 
   final Ref _ref;
@@ -288,10 +319,16 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
 
     applyLogForDate(key, yesNo: yesNo, quantity: quantity);
 
-    if (yesNo != null) {
-      await _repo.setYesNoForDate(_habitId, key, yesNo);
-    } else if (quantity != null) {
-      await _repo.setQuantitativeForDate(_habitId, key, quantity);
+    try {
+      if (yesNo != null) {
+        await _repo.setYesNoForDate(_habitId, key, yesNo);
+      } else if (quantity != null) {
+        await _repo.setQuantitativeForDate(_habitId, key, quantity);
+      }
+    } catch (_) {
+      // Repõe o que está na BD, desfazendo a atualização otimista.
+      await refresh();
+      rethrow;
     }
 
     _ref.invalidate(globalStreakProvider);

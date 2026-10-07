@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/habit_type.dart';
+import '../../../../core/widgets/error_feedback.dart';
 import '../providers/habit_provider.dart';
 import '../widgets/habit_log_sheet.dart';
 import '../widgets/habit_report_section.dart';
@@ -48,8 +49,14 @@ class HabitDetailPage extends ConsumerWidget {
                   ),
                 );
                 if (confirm == true && context.mounted) {
-                  await ref.read(habitListProvider.notifier).deleteHabit(habitId);
-                  if (context.mounted) context.go('/');
+                  final deleted = await runWithErrorFeedback(
+                    context,
+                    () => ref
+                        .read(habitListProvider.notifier)
+                        .deleteHabit(habitId),
+                    message: ErrorMessages.deleteHabit,
+                  );
+                  if (deleted && context.mounted) context.go('/');
                 }
               }
             },
@@ -64,7 +71,11 @@ class HabitDetailPage extends ConsumerWidget {
       ),
       body: detailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Erro: $e')),
+        error: (_, _) => ErrorRetryView(
+          message: 'Não foi possível carregar o hábito.',
+          onRetry: () =>
+              ref.read(habitDetailNotifierProvider(habitId).notifier).refresh(),
+        ),
         data: (detail) {
           if (detail == null) {
             return const Center(child: Text('Hábito não encontrado'));
