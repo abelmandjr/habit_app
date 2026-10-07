@@ -282,7 +282,7 @@ Reorganizada a 2026-10-07. **Ordem de execução:** 2.8 → 2.9 → 2.6 → 2.3 
 |---|---|---|---|
 | 2.8 ✅ | **(nova, decisão 16)** CI com o runner fixo em `ubuntu-24.04`. *(Concluída em 2026-10-07.)* | P | — |
 | 2.9 ✅ | **(nova, decisão 17)** Identidade: `com.abelmandjr.habitapp` (debug: `.debug`), `namespace` e `MainActivity` no pacote Kotlin novo, nome visível "Hábitos" ("Hábitos (debug)"). *(Concluída em 2026-10-07. Confirmado com `aapt dump badging` nos dois APKs. O fluxo no dispositivo passa com o pacote novo. Não mudaram o nome do pacote Dart (`habit_app`), que obrigaria a reescrever todos os imports, nem o `ios/` (decisão 2).)* | P | — |
-| 2.6 ⬜ | Dependências (decisão 15): go_router e flutter_local_notifications para a versão major mais recente, `flutter_timezone` sem o Kotlin Gradle Plugin (ou alternativa mantida), Riverpod 2 mantido. Inclui **remover as dependências não usadas** (`google_fonts`, `cupertino_icons`, `path_provider` se continuar sem uso), que vinha da 2.5. | M | 1.5 |
+| 2.6 ✅ | Dependências (decisão 15). *(Concluída em 2026-10-07.* <br>• go_router **18.0.2** e flutter_local_notifications **22.3.1**. As alterações incompatíveis não afetam a app. <br>• `flutter_timezone` **5.1.1**: já só aplica o Kotlin Gradle Plugin quando o AGP não o fornece, por isso não foi preciso trocá-lo e o aviso do build **desapareceu**. <br>• Removidos `google_fonts`, `cupertino_icons` e `path_provider` (este continua como dependência transitiva do `drift_flutter`). Riverpod 2 mantido. <br>• Verificado: 62 testes, builds de debug e release sem aviso, fluxo e lembrete real no dispositivo (exato, +1 s).)* | M | 1.5 |
 | 2.3 ⬜ | ARB (`flutter_localizations` + `intl` `pt_PT`) e textos uniformizados em PT-PT com **"tu"** (decisão 12). Centraliza datas e números. | M | — |
 | 2.1 ⬜ | **Camada de domínio** com `freezed` (decisão 14): entidades próprias separadas das classes do Drift, repositórios com interface, uma única regra de "meta cumprida", `habit_provider.dart` dividido, `autoDispose` no detalhe. Resolve o M7 e o M8. | G | 1.5 |
 | 2.2 ⬜ | **Streams do Drift** (`watch()`) e queries agregadas em vez de N+1 (M4). | M | 2.1 |
@@ -599,7 +599,7 @@ Notas:
 **Problemas que passam para as fases seguintes:**
 - **M4** (desempenho N+1), **M7** (fuga de providers) e **M8** (lógica duplicada): resolvem-se na 2.1/2.2.
 - **B1–B8, B10:** limpeza e UI. O B9 fica para a 2.5, porque `ficheiroaa.bat` e `assets/` vazio ainda existem.
-- **Kotlin Gradle Plugin:** o build avisa que o `flutter_timezone` o aplica e que versões futuras do Flutter vão falhar com isso. Fica para a 2.6.
+- ~~**Kotlin Gradle Plugin**~~: resolvido na 2.6 (`flutter_timezone` 5.1.1).
 - **CI:** o `ubuntu-latest` passa para o Ubuntu 26 a partir de 19/10/2026.
 
 ---
