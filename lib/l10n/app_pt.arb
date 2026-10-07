@@ -144,9 +144,9 @@
   "streakCurrent": "Sequência atual",
   "streakBest": "Melhor sequência",
   "streakTotal": "Total",
-  "dayUnit": "{count, plural, =0{dias} =1{dia} other{dias}}",
+  "dayUnit": "{count, plural, =1{dia} other{dias}}",
   "@dayUnit": {
-    "description": "Palavra 'dia(s)' que acompanha um número mostrado à parte. O =0 é explícito porque a regra CLDR de \"pt\" (brasileira) põe o 0 no singular; em PT-PT é \"0 dias\".",
+    "description": "Palavra dia(s) que acompanha um número mostrado à parte. O 0 é plural pela regra de pt_PT (ver app_locale.dart).",
     "placeholders": { "count": { "type": "int" } }
   },
   "globalStreakBest": "melhor:",

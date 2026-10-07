@@ -1,0 +1,4 @@
+{
+  "@@locale": "pt_PT",
+  "@@x-comment": "Variante usada pela app. Herda todos os textos de app_pt.arb; existe para que plurais e formatos usem as regras de pt_PT (o 0 é plural: \"0 dias\")."
+}
