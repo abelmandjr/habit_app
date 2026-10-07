@@ -280,7 +280,7 @@ Reorganizada a 2026-10-07. **Ordem de execução:** 2.8 → 2.9 → 2.6 → 2.3 
 
 | # | Tarefa | Esforço | Depende de |
 |---|---|---|---|
-| 2.8 ⬜ | **(nova, decisão 16)** CI com o runner fixo em `ubuntu-24.04` | P | — |
+| 2.8 ✅ | **(nova, decisão 16)** CI com o runner fixo em `ubuntu-24.04`. *(Concluída em 2026-10-07.)* | P | — |
 | 2.9 ⬜ | **(nova, decisão 17)** Identidade: `applicationId` `com.abelmandjr.habitapp` (+ `.debug`), `namespace` e pacote Kotlin do `MainActivity`, nome visível "Hábitos". Feita já porque custa meio dia, evita reinstalar a app mais tarde e o login Google (4.2) é configurado com o nome do pacote. | P | — |
 | 2.6 ⬜ | Dependências (decisão 15): go_router e flutter_local_notifications para a versão major mais recente, `flutter_timezone` sem o Kotlin Gradle Plugin (ou alternativa mantida), Riverpod 2 mantido. Inclui **remover as dependências não usadas** (`google_fonts`, `cupertino_icons`, `path_provider` se continuar sem uso), que vinha da 2.5. | M | 1.5 |
 | 2.3 ⬜ | ARB (`flutter_localizations` + `intl` `pt_PT`) e textos uniformizados em PT-PT com **"tu"** (decisão 12). Centraliza datas e números. | M | — |
