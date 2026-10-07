@@ -1,6 +1,5 @@
 import 'package:clock/clock.dart';
 
-import '../../../../core/models/habit_type.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../entities/habit.dart';
 import '../entities/habit_log.dart';
@@ -208,7 +207,7 @@ class HabitReportCalculator {
       if (activeHabits.isEmpty) continue;
 
       final allMet = activeHabits.every(
-        (habit) => _isGoalMetSync(habit, completionsByHabit[habit.id]?[key]),
+        (habit) => habit.isGoalMet(completionsByHabit[habit.id]?[key]),
       );
       if (allMet) successDays.add(key);
     }
@@ -220,9 +219,4 @@ class HabitReportCalculator {
     );
   }
 
-  static bool _isGoalMetSync(Habit habit, HabitLog? row) {
-    if (row == null) return false;
-    if (habit.type == HabitType.yesNo) return true;
-    return (row.value ?? 0) >= habit.goalValue;
-  }
 }
