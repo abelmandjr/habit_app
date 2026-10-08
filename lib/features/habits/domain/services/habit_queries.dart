@@ -1,4 +1,3 @@
-import '../../../../core/models/habit_type.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../entities/habit.dart';
 import '../entities/habit_log.dart';
@@ -53,7 +52,7 @@ class HabitQueries {
     if (habit == null) return false;
     final log =
         await _repository.getLog(habitId, HabitDateUtils.dateKey(day));
-    return _isGoalMet(habit, log);
+    return habit.isGoalMet(log);
   }
 
   Future<double?> getValueOn(String habitId, DateTime day) async =>
@@ -107,7 +106,7 @@ class HabitQueries {
     final todayLog = logs.where((l) => l.date == today).firstOrNull;
     return HabitWithToday(
       habit: habit,
-      completedToday: _isGoalMet(habit, todayLog),
+      completedToday: habit.isGoalMet(todayLog),
       todayValue: todayLog?.value,
       currentStreak:
           StreakCalculator.compute(_completionDates(habit, logs)).currentStreak,
@@ -119,15 +118,9 @@ class HabitQueries {
     final startKey = HabitReportCalculator.startKeyOf(habit);
     return {
       for (final log in logs)
-        if (log.date.compareTo(startKey) >= 0 && _isGoalMet(habit, log))
+        if (log.date.compareTo(startKey) >= 0 && habit.isGoalMet(log))
           log.date,
     };
-  }
-
-  bool _isGoalMet(Habit habit, HabitLog? log) {
-    if (log == null) return false;
-    if (habit.type == HabitType.yesNo) return true;
-    return (log.value ?? 0) >= habit.goalValue;
   }
 
   static Map<String, List<HabitLog>> _byHabit(List<HabitLog> logs) {

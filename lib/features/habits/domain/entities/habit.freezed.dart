@@ -218,8 +218,8 @@ return $default(_that.id,_that.title,_that.description,_that.category,_that.type
 /// @nodoc
 
 
-class _Habit implements Habit {
-  const _Habit({required this.id, required this.title, this.description = '', required this.category, required this.type, this.unit, this.goalValue = 1, this.reminderEnabled = false, this.reminderHour, this.reminderMinute, required this.createdAt});
+class _Habit extends Habit {
+  const _Habit({required this.id, required this.title, this.description = '', required this.category, required this.type, this.unit, this.goalValue = 1, this.reminderEnabled = false, this.reminderHour, this.reminderMinute, required this.createdAt}): super._();
   
 
 @override final  String id;

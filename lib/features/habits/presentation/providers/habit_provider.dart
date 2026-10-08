@@ -11,6 +11,7 @@ import '../../../../core/storage/user_settings_service.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../data/habit_repository_provider.dart';
 import '../../domain/entities/habit.dart';
+import '../../domain/entities/habit_log.dart';
 import '../../domain/habit_reminders.dart';
 import '../../domain/models/habit_with_today.dart';
 import '../../domain/repositories/habit_repository.dart';
@@ -129,24 +130,19 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
     state = AsyncData(
       current.map((h) {
         if (h.habit.id != habitId) return h;
-        if (yesNo != null) {
-          return HabitWithToday(
-            habit: h.habit,
-            completedToday: yesNo,
-            todayValue: h.todayValue,
-            currentStreak: h.currentStreak,
-          );
-        }
-        if (quantity != null) {
-          final met = quantity >= h.habit.goalValue;
-          return HabitWithToday(
-            habit: h.habit,
-            completedToday: met,
-            todayValue: quantity > 0 ? quantity : null,
-            currentStreak: h.currentStreak,
-          );
-        }
-        return h;
+        if (yesNo == null && quantity == null) return h;
+        final log = _logFor(
+          h.habit,
+          HabitDateUtils.todayKey(),
+          yesNo: yesNo,
+          quantity: quantity,
+        );
+        return HabitWithToday(
+          habit: h.habit,
+          completedToday: h.habit.isGoalMet(log),
+          todayValue: quantity != null ? log?.value : h.todayValue,
+          currentStreak: h.currentStreak,
+        );
       }).toList(),
     );
   }
@@ -169,6 +165,23 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
     }
     await load(silent: true);
   }
+}
+
+/// O registo que uma ação do utilizador deixa no dia [date]: marcar sim cria
+/// um registo, marcar não apaga-o, e um valor ≤ 0 também o apaga.
+HabitLog? _logFor(
+  Habit habit,
+  String date, {
+  bool? yesNo,
+  double? quantity,
+}) {
+  if (yesNo != null) {
+    return yesNo ? HabitLog(habitId: habit.id, date: date, value: 1) : null;
+  }
+  if (quantity != null && quantity > 0) {
+    return HabitLog(habitId: habit.id, date: date, value: quantity);
+  }
+  return null;
 }
 
 final habitDetailNotifierProvider = StateNotifierProvider.family<
@@ -254,14 +267,17 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
 
     if (type == HabitType.yesNo && yesNo != null && current.yesNoReport != null) {
       final dates = Set<String>.from(current.yesNoReport!.completionDates);
-      if (yesNo) {
+      final met = current.habit.isGoalMet(
+        _logFor(current.habit, dateKey, yesNo: yesNo),
+      );
+      if (met) {
         dates.add(dateKey);
       } else {
         dates.remove(dateKey);
       }
       state = AsyncData(
         current.copyWith(
-          completedToday: isToday ? yesNo : current.completedToday,
+          completedToday: isToday ? met : current.completedToday,
           yesNoReport: HabitReportCalculator.buildYesNoReport(
             habit: current.habit,
             completionDates: dates,
@@ -276,7 +292,9 @@ class HabitDetailNotifier extends StateNotifier<AsyncValue<HabitDetailState?>> {
         current.quantitativeReport != null) {
       final report = current.quantitativeReport!;
       final goal = current.habit.goalValue;
-      final met = quantity > 0 && quantity >= goal;
+      final met = current.habit.isGoalMet(
+        _logFor(current.habit, dateKey, quantity: quantity),
+      );
       final dates = Set<String>.from(report.goalMetDates);
       final logged = Set<String>.from(report.loggedDates);
       if (met) {
