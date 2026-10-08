@@ -29,10 +29,17 @@ final globalStreakProvider = FutureProvider<GlobalStreakStats>((ref) async {
 
 class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> {
   HabitListNotifier(this._ref) : super(const AsyncLoading()) {
-    unawaited(load());
+    // A primeira emissão faz a carga inicial; as seguintes trazem alterações
+    // feitas fora deste notifier (outro ecrã, futura sincronização), sem
+    // recarregar à mão (tarefa 2.2, bug M4).
+    _subscription = _queries.watchHabitsWithTodayStatus().listen(
+          (data) => unawaited(_publish(data)),
+          onError: (Object e, StackTrace st) => state = AsyncError(e, st),
+        );
   }
 
   final Ref _ref;
+  late final StreamSubscription<List<HabitWithToday>> _subscription;
   static var _remindersSynced = false;
 
   HabitRepository get _repo => _ref.read(habitRepositoryProvider);
@@ -40,16 +47,22 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
   NotificationService get _notifications =>
       _ref.read(notificationServiceProvider);
 
+  /// Recarga explícita ("Tentar de novo", mudança de dia, repor após falha).
   Future<void> load({bool silent = false}) async {
     if (!silent) state = const AsyncLoading();
+    final List<HabitWithToday> data;
     try {
-      final data = await _queries.getHabitsWithTodayStatus();
-      state = AsyncData(data);
+      data = await _queries.getHabitsWithTodayStatus();
     } catch (e, st) {
       state = AsyncError(e, st);
       return;
     }
+    await _publish(data);
+  }
 
+  Future<void> _publish(List<HabitWithToday> data) async {
+    if (!mounted) return;
+    state = AsyncData(data);
     if (!_remindersSynced) {
       _remindersSynced = true;
       await _syncReminders();
@@ -131,6 +144,12 @@ class HabitListNotifier extends StateNotifier<AsyncValue<List<HabitWithToday>>> 
         );
       }).toList(),
     );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_subscription.cancel());
+    super.dispose();
   }
 
   Future<void> deleteHabit(String id) async {

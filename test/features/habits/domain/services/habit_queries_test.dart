@@ -1,4 +1,3 @@
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:habit_app/core/database/app_database.dart';
 import 'package:habit_app/core/models/habit_type.dart';
@@ -15,7 +14,7 @@ void main() {
   late HabitQueries queries;
 
   setUp(() {
-    db = AppDatabase(NativeDatabase.memory());
+    db = memoryDatabase();
     repo = DriftHabitRepository(db);
     queries = HabitQueries(repo);
   });

@@ -1,6 +1,5 @@
 import 'package:clock/clock.dart';
 import 'package:drift/drift.dart' show Value;
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +10,7 @@ import 'package:habit_app/core/utils/date_utils.dart';
 import 'package:habit_app/main.dart';
 
 import 'helpers/fakes.dart';
+import 'helpers/fixtures.dart';
 
 /// Tarefa 1.8: quando muda o dia (com a app aberta ou ao voltar a ela), a
 /// lista "Hoje" passa para o novo dia.
@@ -19,7 +19,7 @@ import 'helpers/fakes.dart';
 void main() {
   late AppDatabase db;
 
-  setUp(() => db = AppDatabase(NativeDatabase.memory()));
+  setUp(() => db = memoryDatabase());
   tearDown(() => db.close());
 
   /// Hábito feito "hoje" e a app aberta no dashboard.

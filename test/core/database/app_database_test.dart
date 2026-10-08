@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:habit_app/core/database/app_database.dart';
+import '../../helpers/fixtures.dart';
 
 /// Tarefa 1.4: a v4 é a base do schema e as chaves estrangeiras estão ativas.
 void main() {
@@ -15,7 +16,7 @@ void main() {
       );
 
   test('BD nova é criada na versão base (4)', () async {
-    final db = AppDatabase(NativeDatabase.memory());
+    final db = memoryDatabase();
     addTearDown(db.close);
 
     await insertHabit(db, 'h1');
@@ -73,7 +74,7 @@ void main() {
   group('chaves estrangeiras', () {
     late AppDatabase db;
 
-    setUp(() => db = AppDatabase(NativeDatabase.memory()));
+    setUp(() => db = memoryDatabase());
     tearDown(() => db.close());
 
     test('estão ativas', () async {

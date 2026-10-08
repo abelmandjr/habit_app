@@ -48,7 +48,8 @@ class FakeNotifications implements NotificationService {
 }
 
 /// Repositório real (BD em memória) em que as escritas falham sempre e a
-/// leitura dos hábitos falha as primeiras [failedLoads] vezes.
+/// leitura dos hábitos pela lista (o stream) falha as primeiras [failedLoads]
+/// vezes.
 class FailingRepository extends DriftHabitRepository {
   FailingRepository(super.db, {this.failedLoads = 0});
 
@@ -57,13 +58,13 @@ class FailingRepository extends DriftHabitRepository {
   static Future<void> _fail() => Future.error(Exception('falha simulada'));
 
   @override
-  Future<List<Habit>> getHabits() {
-    if (failedLoads > 0) {
-      failedLoads--;
-      return Future.error(Exception('falha simulada'));
-    }
-    return super.getHabits();
-  }
+  Stream<List<Habit>> watchHabits() => super.watchHabits().map((habits) {
+        if (failedLoads > 0) {
+          failedLoads--;
+          throw Exception('falha simulada');
+        }
+        return habits;
+      });
 
   @override
   Future<void> setYesNo(String habitId, String date, bool done) => _fail();

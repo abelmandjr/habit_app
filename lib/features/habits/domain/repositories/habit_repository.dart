@@ -8,6 +8,11 @@ import '../entities/habit_log.dart';
 abstract interface class HabitRepository {
   Future<List<Habit>> getHabits();
 
+  /// Emite a lista sempre que os hábitos mudam.
+  Stream<List<Habit>> watchHabits();
+
+  Stream<Habit?> watchHabit(String id);
+
   Future<Habit?> getHabit(String id);
 
   Future<void> createHabit(Habit habit);
@@ -20,6 +25,11 @@ abstract interface class HabitRepository {
   Future<List<HabitLog>> getLogs(String habitId);
 
   Future<List<HabitLog>> getAllLogs();
+
+  /// Emite os registos sempre que mudam.
+  Stream<List<HabitLog>> watchAllLogs();
+
+  Stream<List<HabitLog>> watchLogs(String habitId);
 
   /// Registo de [habitId] no dia [date] (`YYYY-MM-DD`), se existir.
   Future<HabitLog?> getLog(String habitId, String date);
