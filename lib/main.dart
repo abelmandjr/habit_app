@@ -10,10 +10,8 @@ import 'core/routes/app_router.dart';
 import 'core/theme/light_theme.dart';
 import 'core/utils/date_utils.dart';
 import 'features/habits/presentation/providers/habit_provider.dart';
+import 'l10n/app_locale.dart';
 import 'l10n/app_localizations.dart';
-
-/// Língua da app (decisão 5: PT-PT).
-const appLocale = Locale('pt', 'PT');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

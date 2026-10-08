@@ -92,7 +92,10 @@ abstract class AppLocalizations {
       ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('pt')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('pt'),
+    Locale('pt', 'PT'),
+  ];
 
   /// No description provided for @appTitle.
   ///
@@ -784,10 +787,10 @@ abstract class AppLocalizations {
   /// **'Total'**
   String get streakTotal;
 
-  /// Palavra 'dia(s)' que acompanha um número mostrado à parte. O =0 é explícito porque a regra CLDR de "pt" (brasileira) põe o 0 no singular; em PT-PT é "0 dias".
+  /// Palavra dia(s) que acompanha um número mostrado à parte. O 0 é plural pela regra de pt_PT (ver app_locale.dart).
   ///
   /// In pt, this message translates to:
-  /// **'{count, plural, =0{dias} =1{dia} other{dias}}'**
+  /// **'{count, plural, =1{dia} other{dias}}'**
   String dayUnit(int count);
 
   /// No description provided for @globalStreakBest.
@@ -875,6 +878,18 @@ class _AppLocalizationsDelegate
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+  // Lookup logic when language+country codes are specified.
+  switch (locale.languageCode) {
+    case 'pt':
+      {
+        switch (locale.countryCode) {
+          case 'PT':
+            return AppLocalizationsPtPt();
+        }
+        break;
+      }
+  }
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
     case 'pt':

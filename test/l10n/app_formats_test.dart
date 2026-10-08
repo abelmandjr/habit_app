@@ -1,5 +1,7 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:habit_app/l10n/app_formats.dart';
+import 'package:habit_app/l10n/app_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import '../helpers/test_app.dart';
@@ -27,10 +29,21 @@ void main() {
     expect(AppFormats.percent(5 / 9), '56%');
   });
 
-  test('plural de "dia": 0 dias, 1 dia, 2 dias (PT-PT)', () {
-    expect(testL10n.dayUnit(0), 'dias');
-    expect(testL10n.dayUnit(1), 'dia');
-    expect(testL10n.dayUnit(2), 'dias');
+  group('plural de "dia"', () {
+    test('a app usa pt_PT', () {
+      expect(testL10n.localeName, 'pt_PT');
+    });
+
+    test('pt_PT: 0 dias, 1 dia, 2 dias', () {
+      expect(testL10n.dayUnit(0), 'dias');
+      expect(testL10n.dayUnit(1), 'dia');
+      expect(testL10n.dayUnit(2), 'dias');
+    });
+
+    test('controlo: com a regra de "pt" (Brasil) o 0 seria singular', () {
+      // É por isto que a app usa pt_PT e o ARB não tem nenhum "=0".
+      expect(lookupAppLocalizations(const Locale('pt')).dayUnit(0), 'dia');
+    });
   });
 
   test('saudação com e sem nome', () {

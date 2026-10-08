@@ -388,7 +388,6 @@ class AppLocalizationsPt extends AppLocalizations {
       locale: localeName,
       other: 'dias',
       one: 'dia',
-      zero: 'dias',
     );
     return '$_temp0';
   }
@@ -430,4 +429,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get notificationTitle => 'Hora do hábito';
+}
+
+/// The translations for Portuguese, as used in Portugal (`pt_PT`).
+class AppLocalizationsPtPt extends AppLocalizationsPt {
+  AppLocalizationsPtPt() : super('pt_PT');
 }

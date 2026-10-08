@@ -1,5 +1,3 @@
-import 'dart:ui' show Locale;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +5,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../l10n/app_locale.dart';
 import '../../l10n/app_localizations.dart';
 import '../database/app_database.dart';
 
@@ -176,7 +175,7 @@ class NotificationService {
     );
 
     // Sem BuildContext: os textos vêm diretamente do ARB da língua da app.
-    final l10n = lookupAppLocalizations(const Locale('pt'));
+    final l10n = lookupAppLocalizations(appLocale);
     final androidDetails = AndroidNotificationDetails(
       'habit_reminders',
       l10n.notificationChannelName,
