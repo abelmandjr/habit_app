@@ -11,6 +11,7 @@ import 'package:habit_app/features/dashboard/presentation/pages/dashboard_page.d
 
 import '../../helpers/fakes.dart';
 import '../../helpers/test_app.dart';
+import '../../helpers/fixtures.dart';
 
 /// Tarefa 1.9: o registo quantitativo aceita vírgula e ponto decimal.
 void main() {
@@ -49,7 +50,7 @@ void main() {
   }
 
   Future<double?> todayValue() =>
-      db.getLoggedValue('agua', HabitDateUtils.todayKey());
+      queriesFor(db).getValueOn('agua', HabitDateUtils.parseKey(HabitDateUtils.todayKey()));
 
   testWidgets('aceita vírgula decimal ("1,5")', (tester) async {
     await logValue(tester, '1,5');

@@ -7,7 +7,9 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../../l10n/app_locale.dart';
 import '../../l10n/app_localizations.dart';
-import '../database/app_database.dart';
+import 'habit_reminder.dart';
+
+export 'habit_reminder.dart';
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService.instance;
@@ -112,22 +114,24 @@ class NotificationService {
   bool? get lastKnownExactAlarmsAllowed => _lastExactAllowed;
 
   /// Verifica se a permissão de alarmes exatos mudou desde a última vez e,
-  /// se mudou, reagenda todos os lembretes no modo certo. Devolve o estado.
-  Future<bool> syncExactAlarmPermission(AppDatabase db) async {
+  /// se mudou, reagenda todos os lembretes no modo certo. [loadReminders] só é
+  /// chamado nesse caso. Devolve o estado.
+  Future<bool> syncExactAlarmPermission(
+    Future<List<HabitReminder>> Function() loadReminders,
+  ) async {
     final allowed = await canScheduleExactAlarms();
     final previous = _lastExactAllowed;
     _lastExactAllowed = allowed;
     if (previous != null && previous != allowed) {
-      await rescheduleAll(db);
+      await rescheduleAll(await loadReminders());
     }
     return allowed;
   }
 
-  Future<void> rescheduleAll(AppDatabase db) async {
+  Future<void> rescheduleAll(List<HabitReminder> reminders) async {
     if (!_initialized) return;
-    final habits = await db.getAllHabits();
-    for (final habit in habits) {
-      await syncHabitReminder(habit);
+    for (final reminder in reminders) {
+      await syncHabitReminder(reminder);
     }
   }
 
@@ -161,17 +165,17 @@ class NotificationService {
   int notificationIdForHabit(String habitId) =>
       habitId.hashCode.abs() % 2147483647;
 
-  Future<void> scheduleHabitReminder(HabitData habit) async {
-    if (!_initialized || !habit.reminderEnabled) return;
-    if (habit.reminderHour == null || habit.reminderMinute == null) return;
+  Future<void> scheduleHabitReminder(HabitReminder reminder) async {
+    if (!_initialized || !reminder.enabled) return;
+    if (reminder.hour == null || reminder.minute == null) return;
 
-    final id = notificationIdForHabit(habit.id);
-    await cancelHabitReminder(habit.id);
+    final id = notificationIdForHabit(reminder.habitId);
+    await cancelHabitReminder(reminder.habitId);
 
     final scheduled = nextInstanceOf(
       tz.TZDateTime.now(tz.local),
-      habit.reminderHour!,
-      habit.reminderMinute!,
+      reminder.hour!,
+      reminder.minute!,
     );
 
     // Sem BuildContext: os textos vêm diretamente do ARB da língua da app.
@@ -192,7 +196,7 @@ class NotificationService {
     await _plugin.zonedSchedule(
       id: id,
       title: l10n.notificationTitle,
-      body: habit.title,
+      body: reminder.title,
       scheduledDate: scheduled,
       notificationDetails: details,
       // Exato só com SCHEDULE_EXACT_ALARM concedida pelo utilizador. Sem ela,
@@ -208,11 +212,11 @@ class NotificationService {
     await _plugin.cancel(id: notificationIdForHabit(habitId));
   }
 
-  Future<void> syncHabitReminder(HabitData habit) async {
-    if (habit.reminderEnabled) {
-      await scheduleHabitReminder(habit);
+  Future<void> syncHabitReminder(HabitReminder reminder) async {
+    if (reminder.enabled) {
+      await scheduleHabitReminder(reminder);
     } else {
-      await cancelHabitReminder(habit.id);
+      await cancelHabitReminder(reminder.habitId);
     }
   }
 }

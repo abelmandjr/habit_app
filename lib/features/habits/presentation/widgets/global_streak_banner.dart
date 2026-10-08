@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/utils/habit_report_calculator.dart';
+import '../../domain/services/habit_report_calculator.dart';
 import '../../../../l10n/app_localizations.dart';
 
 class GlobalStreakBanner extends StatelessWidget {

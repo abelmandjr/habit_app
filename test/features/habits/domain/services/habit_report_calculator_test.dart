@@ -1,7 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:habit_app/core/utils/habit_report_calculator.dart';
+import 'package:habit_app/core/models/habit_type.dart';
+import 'package:habit_app/features/habits/domain/services/habit_report_calculator.dart';
 
-import '../../helpers/fixtures.dart';
+import '../../../../helpers/fixtures.dart';
 
 void main() {
   group('buildYesNoReport', () {
@@ -59,21 +60,21 @@ void main() {
   group('buildQuantitativeReport', () {
     test('calcula hoje, média, total, melhor dia, progresso e histórico', () {
       final habit = makeHabit(
-        habitType: 'quantitative',
+        type: HabitType.quantitative,
         goalValue: 2,
         unit: 'L',
       );
       final completions = [
-        makeCompletion('h1', '2026-06-13', 1),
-        makeCompletion('h1', '2026-06-14', 3),
-        makeCompletion('h1', '2026-06-15', 2),
-        makeCompletion('h1', '2026-06-10', 0), // valor 0 é ignorado
+        makeLog('h1', '2026-06-13', 1),
+        makeLog('h1', '2026-06-14', 3),
+        makeLog('h1', '2026-06-15', 2),
+        makeLog('h1', '2026-06-10', 0), // valor 0 é ignorado
       ];
 
       final report = atTestNow(
         () => HabitReportCalculator.buildQuantitativeReport(
           habit: habit,
-          completions: completions,
+          logs: completions,
           goalMetDates: {'2026-06-14', '2026-06-15'},
         ),
       );
@@ -95,11 +96,11 @@ void main() {
     });
 
     test('progresso é limitado a 100 %', () {
-      final habit = makeHabit(habitType: 'quantitative', goalValue: 2);
+      final habit = makeHabit(type: HabitType.quantitative, goalValue: 2);
       final report = atTestNow(
         () => HabitReportCalculator.buildQuantitativeReport(
           habit: habit,
-          completions: [makeCompletion('h1', '2026-06-15', 5)],
+          logs: [makeLog('h1', '2026-06-15', 5)],
           goalMetDates: {'2026-06-15'},
         ),
       );
@@ -112,7 +113,7 @@ void main() {
       final stats = atTestNow(
         () => HabitReportCalculator.computeGlobalStreak(
           habits: [],
-          allCompletions: [],
+          allLogs: [],
         ),
       );
       expect(stats.currentStreak, 0);
@@ -123,7 +124,7 @@ void main() {
       final meditar = makeHabit(id: 'a', createdAt: DateTime(2026, 6, 12));
       final agua = makeHabit(
         id: 'b',
-        habitType: 'quantitative',
+        type: HabitType.quantitative,
         goalValue: 2,
         createdAt: DateTime(2026, 6, 12),
       );
@@ -132,19 +133,19 @@ void main() {
 
       final completions = [
         for (final d in ['2026-06-12', '2026-06-13', '2026-06-14', '2026-06-15'])
-          makeCompletion('a', d),
-        makeCompletion('b', '2026-06-12', 1), // abaixo da meta
-        makeCompletion('b', '2026-06-13', 2),
-        makeCompletion('b', '2026-06-14', 2),
-        makeCompletion('b', '2026-06-15', 3),
-        makeCompletion('c', '2026-06-14'),
-        makeCompletion('c', '2026-06-15'),
+          makeLog('a', d),
+        makeLog('b', '2026-06-12', 1), // abaixo da meta
+        makeLog('b', '2026-06-13', 2),
+        makeLog('b', '2026-06-14', 2),
+        makeLog('b', '2026-06-15', 3),
+        makeLog('c', '2026-06-14'),
+        makeLog('c', '2026-06-15'),
       ];
 
       final stats = atTestNow(
         () => HabitReportCalculator.computeGlobalStreak(
           habits: [meditar, agua, ler],
-          allCompletions: completions,
+          allLogs: completions,
         ),
       );
 

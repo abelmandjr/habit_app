@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/habit_type.dart';
-import '../../../../core/utils/habit_report_calculator.dart';
+import '../../../habits/domain/services/habit_report_calculator.dart';
 import '../../../habits/presentation/providers/habit_list_preferences.dart';
 import '../../../habits/presentation/providers/habit_provider.dart';
 import '../../../habits/presentation/utils/habit_list_utils.dart';

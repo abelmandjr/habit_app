@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/models/habit_type.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/error_feedback.dart';
-import '../../data/repositories/habit_repository_impl.dart';
+import '../../domain/models/habit_with_today.dart';
 import '../../../../l10n/app_formats.dart';
 import '../../../../l10n/app_localizations.dart';
 

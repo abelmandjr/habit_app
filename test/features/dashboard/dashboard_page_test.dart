@@ -10,6 +10,7 @@ import 'package:habit_app/features/dashboard/presentation/pages/dashboard_page.d
 
 import '../../helpers/fakes.dart';
 import '../../helpers/test_app.dart';
+import '../../helpers/fixtures.dart';
 
 void main() {
   late AppDatabase db;
@@ -51,7 +52,7 @@ void main() {
     await tester.tap(find.text('Meditar'));
     await tester.pumpAndSettle();
 
-    final done = await db.isCompletedOn('h1', HabitDateUtils.todayKey());
+    final done = await queriesFor(db).isCompletedOn('h1', HabitDateUtils.parseKey(HabitDateUtils.todayKey()));
     expect(done, isTrue);
     expect(find.byIcon(Icons.check_rounded), findsOneWidget);
   });

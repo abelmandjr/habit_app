@@ -2,7 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/models/habit_type.dart';
-import '../../../../core/utils/habit_report_calculator.dart';
+import '../../domain/services/habit_report_calculator.dart';
 import '../../../../core/utils/date_utils.dart';
 import 'streak_calendar.dart';
 import 'streak_card.dart';

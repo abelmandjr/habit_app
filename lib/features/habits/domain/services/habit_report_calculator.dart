@@ -1,8 +1,9 @@
 import 'package:clock/clock.dart';
 
-import '../database/app_database.dart';
-import '../models/habit_type.dart';
-import 'date_utils.dart';
+import '../../../../core/models/habit_type.dart';
+import '../../../../core/utils/date_utils.dart';
+import '../entities/habit.dart';
+import '../entities/habit_log.dart';
 import 'streak_calculator.dart';
 
 class GlobalStreakStats {
@@ -73,7 +74,7 @@ class HabitReportCalculator {
 
   /// Chave do dia de início do hábito. Até à v5 (coluna `startDate`, tarefa
   /// 3.4), a data de início é o dia de criação.
-  static String startKeyOf(HabitData habit) =>
+  static String startKeyOf(Habit habit) =>
       HabitDateUtils.dateKey(habit.createdAt);
 
   /// Dias de calendário desde o início até hoje, inclusive.
@@ -84,7 +85,7 @@ class HabitReportCalculator {
       dates.where((d) => d.compareTo(startKey) >= 0).toSet();
 
   static YesNoHabitReport buildYesNoReport({
-    required HabitData habit,
+    required Habit habit,
     required Set<String> completionDates,
   }) {
     final dates = _fromStart(completionDates, startKeyOf(habit));
@@ -110,15 +111,15 @@ class HabitReportCalculator {
   }
 
   static QuantitativeHabitReport buildQuantitativeReport({
-    required HabitData habit,
-    required List<HabitCompletion> completions,
+    required Habit habit,
+    required List<HabitLog> logs,
     required Set<String> goalMetDates,
   }) {
     final todayKey = HabitDateUtils.todayKey();
     final startKey = startKeyOf(habit);
     goalMetDates = _fromStart(goalMetDates, startKey);
-    final rowsWithValue = completions
-        .where((c) => (c.loggedValue ?? 0) > 0)
+    final rowsWithValue = logs
+        .where((c) => (c.value ?? 0) > 0)
         .where((c) => c.date.compareTo(startKey) >= 0)
         .toList()
       ..sort((a, b) => a.date.compareTo(b.date));
@@ -126,17 +127,17 @@ class HabitReportCalculator {
     double todayValue = 0;
     for (final row in rowsWithValue) {
       if (row.date == todayKey) {
-        todayValue = row.loggedValue ?? 0;
+        todayValue = row.value ?? 0;
         break;
       }
     }
 
     var total = 0.0;
-    HabitCompletion? bestRow;
+    HabitLog? bestRow;
     for (final row in rowsWithValue) {
-      final v = row.loggedValue ?? 0;
+      final v = row.value ?? 0;
       total += v;
-      if (bestRow == null || v > (bestRow.loggedValue ?? 0)) {
+      if (bestRow == null || v > (bestRow.value ?? 0)) {
         bestRow = row;
       }
     }
@@ -148,7 +149,7 @@ class HabitReportCalculator {
 
     final last30 = HabitDateUtils.lastDays(30);
     final valueByDate = {
-      for (final r in rowsWithValue) r.date: r.loggedValue ?? 0.0,
+      for (final r in rowsWithValue) r.date: r.value ?? 0.0,
     };
     final history = last30
         .map(
@@ -165,7 +166,7 @@ class HabitReportCalculator {
       todayValue: todayValue,
       dailyAverage: average,
       totalAccumulated: total,
-      bestDayValue: bestRow?.loggedValue ?? 0,
+      bestDayValue: bestRow?.value ?? 0,
       bestDayDate: bestRow?.date,
       goalProgress: progress,
       goalMetToday: goalMetDates.contains(todayKey),
@@ -178,15 +179,15 @@ class HabitReportCalculator {
 
   /// Dia conta se todos os hábitos ativos nesse dia atingiram a meta.
   static GlobalStreakStats computeGlobalStreak({
-    required List<HabitData> habits,
-    required List<HabitCompletion> allCompletions,
+    required List<Habit> habits,
+    required List<HabitLog> allLogs,
   }) {
     if (habits.isEmpty) {
       return const GlobalStreakStats(currentStreak: 0, bestStreak: 0);
     }
 
-    final completionsByHabit = <String, Map<String, HabitCompletion>>{};
-    for (final row in allCompletions) {
+    final completionsByHabit = <String, Map<String, HabitLog>>{};
+    for (final row in allLogs) {
       completionsByHabit
           .putIfAbsent(row.habitId, () => {})
           [row.date] = row;
@@ -219,9 +220,9 @@ class HabitReportCalculator {
     );
   }
 
-  static bool _isGoalMetSync(HabitData habit, HabitCompletion? row) {
+  static bool _isGoalMetSync(Habit habit, HabitLog? row) {
     if (row == null) return false;
-    if (HabitType.fromKey(habit.habitType) == HabitType.yesNo) return true;
-    return (row.loggedValue ?? 0) >= habit.goalValue;
+    if (habit.type == HabitType.yesNo) return true;
+    return (row.value ?? 0) >= habit.goalValue;
   }
 }

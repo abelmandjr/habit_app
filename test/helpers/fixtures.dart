@@ -1,5 +1,10 @@
 import 'package:clock/clock.dart';
 import 'package:habit_app/core/database/app_database.dart';
+import 'package:habit_app/core/models/habit_type.dart';
+import 'package:habit_app/features/habits/data/repositories/drift_habit_repository.dart';
+import 'package:habit_app/features/habits/domain/entities/habit.dart';
+import 'package:habit_app/features/habits/domain/entities/habit_log.dart';
+import 'package:habit_app/features/habits/domain/services/habit_queries.dart';
 
 /// "Hoje" em todos os testes: segunda-feira, 15 de junho de 2026, 10:00.
 /// Longe de mudanças de hora, para os resultados não dependerem do fuso.
@@ -7,39 +12,28 @@ final testNow = DateTime(2026, 6, 15, 10);
 
 T atTestNow<T>(T Function() body) => withClock(Clock.fixed(testNow), body);
 
-HabitData makeHabit({
+Habit makeHabit({
   String id = 'h1',
   String title = 'Meditar',
-  String habitType = 'yesNo',
+  HabitType type = HabitType.yesNo,
   int goalValue = 1,
   String? unit,
   DateTime? createdAt,
 }) {
-  return HabitData(
+  return Habit(
     id: id,
     title: title,
-    description: '',
     category: 'Geral',
-    habitType: habitType,
+    type: type,
     unit: unit,
     goalValue: goalValue,
-    isCompleted: false,
-    reminderEnabled: false,
     createdAt: createdAt ?? DateTime(2026, 6, 1),
   );
 }
 
-var _nextCompletionId = 1;
+HabitLog makeLog(String habitId, String date, [double? value = 1]) =>
+    HabitLog(habitId: habitId, date: date, value: value);
 
-HabitCompletion makeCompletion(
-  String habitId,
-  String date, [
-  double? value = 1,
-]) {
-  return HabitCompletion(
-    id: _nextCompletionId++,
-    habitId: habitId,
-    date: date,
-    loggedValue: value,
-  );
-}
+/// Consultas sobre uma BD de teste, para verificar o que ficou gravado.
+HabitQueries queriesFor(AppDatabase db) =>
+    HabitQueries(DriftHabitRepository(db));
