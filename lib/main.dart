@@ -10,6 +10,10 @@ import 'core/routes/app_router.dart';
 import 'core/theme/light_theme.dart';
 import 'core/utils/date_utils.dart';
 import 'features/habits/presentation/providers/habit_provider.dart';
+import 'l10n/app_localizations.dart';
+
+/// Língua da app (decisão 5: PT-PT).
+const appLocale = Locale('pt', 'PT');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -93,7 +97,13 @@ class _MyAppState extends ConsumerState<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       theme: lightTheme,
+      // Português de Portugal em toda a app, incluindo os widgets do Material
+      // (seletor de hora, etc.), independentemente da língua do telemóvel.
+      locale: appLocale,
+      supportedLocales: const [appLocale],
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       routerConfig: appRouter,
     );
   }

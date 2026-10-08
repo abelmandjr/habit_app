@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/habit_report_calculator.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class GlobalStreakBanner extends StatelessWidget {
   const GlobalStreakBanner({super.key, required this.stats});
@@ -10,6 +11,7 @@ class GlobalStreakBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       width: double.infinity,
@@ -37,20 +39,20 @@ class GlobalStreakBanner extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   TextSpan(
-                    text: stats.currentStreak == 1 ? 'dia' : 'dias',
+                    text: l10n.dayUnit(stats.currentStreak),
                     style: TextStyle(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                   TextSpan(
-                    text: '  ·  melhor: ${stats.bestStreak} ',
+                    text: '  ·  ${l10n.globalStreakBest} ${stats.bestStreak} ',
                     style: TextStyle(
                       color: theme.colorScheme.onSurfaceVariant,
                       fontSize: 14,
                     ),
                   ),
                   TextSpan(
-                    text: stats.bestStreak == 1 ? 'dia' : 'dias',
+                    text: l10n.dayUnit(stats.bestStreak),
                     style: TextStyle(
                       color: theme.colorScheme.onSurfaceVariant,
                       fontSize: 14,

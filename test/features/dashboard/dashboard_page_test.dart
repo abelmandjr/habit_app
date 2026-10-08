@@ -9,6 +9,7 @@ import 'package:habit_app/core/utils/date_utils.dart';
 import 'package:habit_app/features/dashboard/presentation/pages/dashboard_page.dart';
 
 import '../../helpers/fakes.dart';
+import '../../helpers/test_app.dart';
 
 void main() {
   late AppDatabase db;
@@ -23,7 +24,7 @@ void main() {
           dbProvider.overrideWithValue(db),
           notificationServiceProvider.overrideWithValue(FakeNotifications()),
         ],
-        child: const MaterialApp(home: DashboardPage()),
+        child: testApp(const DashboardPage()),
       ),
     );
     await tester.pumpAndSettle();
@@ -38,7 +39,7 @@ void main() {
   testWidgets('sem hábitos mostra o estado vazio', (tester) async {
     await pumpDashboard(tester);
 
-    expect(find.text('Nenhum hábito ainda'), findsOneWidget);
+    expect(find.text(testL10n.emptyTitle), findsOneWidget);
   });
 
   testWidgets('tocar num hábito sim/não marca-o como feito hoje', (
@@ -63,12 +64,12 @@ void main() {
 
     await tester.drag(find.byType(Dismissible), const Offset(-600, 0));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+    await tester.tap(find.widgetWithText(FilledButton, testL10n.actionDelete));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
     expect(find.text('Meditar'), findsNothing);
-    expect(find.text('Nenhum hábito ainda'), findsOneWidget);
+    expect(find.text(testL10n.emptyTitle), findsOneWidget);
     expect(await db.getAllHabits(), isEmpty);
   });
 
@@ -96,7 +97,7 @@ void main() {
 
       await tester.drag(find.byType(Dismissible), const Offset(-600, 0));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+      await tester.tap(find.widgetWithText(FilledButton, testL10n.actionDelete));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);

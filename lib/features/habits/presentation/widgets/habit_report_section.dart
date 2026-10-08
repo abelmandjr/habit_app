@@ -6,6 +6,8 @@ import '../../../../core/utils/habit_report_calculator.dart';
 import '../../../../core/utils/date_utils.dart';
 import 'streak_calendar.dart';
 import 'streak_card.dart';
+import '../../../../l10n/app_formats.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class HabitReportSection extends StatelessWidget {
   const HabitReportSection({
@@ -33,7 +35,7 @@ class HabitReportSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Relatório',
+          AppLocalizations.of(context).reportTitle,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -72,18 +74,20 @@ class _YesNoReportView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _MetricsGrid(
           items: [
-            _Metric('Dias feitos', '${report.daysDone}'),
-            _Metric('Dias falhados', '${report.daysFailed}'),
+            _Metric(l10n.metricDaysDone, '${report.daysDone}'),
+            _Metric(l10n.metricDaysMissed, '${report.daysFailed}'),
             _Metric(
-              'Sucesso',
-              '${report.successRate.toStringAsFixed(0)}%',
+              l10n.metricSuccess,
+              AppFormats.percent(report.successRate / 100),
             ),
-            _Metric('Dias acompanhados', '${report.trackedDays}'),
+            _Metric(l10n.metricTrackedDays, '${report.trackedDays}'),
           ],
         ),
         const SizedBox(height: 20),
@@ -98,7 +102,7 @@ class _YesNoReportView extends StatelessWidget {
         if (onDayTap != null) ...[
           const SizedBox(height: 8),
           Text(
-            'Toque num dia para editar o histórico manualmente.',
+            l10n.reportTapToEdit,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -127,9 +131,10 @@ class _QuantitativeReportView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final unitSuffix = unit.isNotEmpty ? ' $unit' : '';
+    final l10n = AppLocalizations.of(context);
+    String qty(num v) => AppFormats.quantity(v, unit);
     final bestLabel = report.bestDayDate != null
-        ? '${report.bestDayValue.toStringAsFixed(1)}$unitSuffix (${_shortDate(report.bestDayDate!)})'
+        ? '${qty(report.bestDayValue)} (${AppFormats.dayMonth(HabitDateUtils.parseKey(report.bestDayDate!))})'
         : '—';
 
     return Column(
@@ -137,19 +142,10 @@ class _QuantitativeReportView extends StatelessWidget {
       children: [
         _MetricsGrid(
           items: [
-            _Metric(
-              'Hoje',
-              '${report.todayValue.toStringAsFixed(1)}$unitSuffix',
-            ),
-            _Metric(
-              'Média diária',
-              '${report.dailyAverage.toStringAsFixed(1)}$unitSuffix',
-            ),
-            _Metric(
-              'Total acumulado',
-              '${report.totalAccumulated.toStringAsFixed(1)}$unitSuffix',
-            ),
-            _Metric('Melhor dia', bestLabel),
+            _Metric(l10n.metricToday, qty(report.todayValue)),
+            _Metric(l10n.metricDailyAverage, qty(report.dailyAverage)),
+            _Metric(l10n.metricTotal, qty(report.totalAccumulated)),
+            _Metric(l10n.metricBestDay, bestLabel),
           ],
         ),
         const SizedBox(height: 16),
@@ -160,7 +156,7 @@ class _QuantitativeReportView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Progresso da meta hoje',
+                  l10n.reportGoalProgress,
                   style: theme.textTheme.titleSmall,
                 ),
                 const SizedBox(height: 8),
@@ -177,7 +173,7 @@ class _QuantitativeReportView extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      '${(report.goalProgress * 100).round()}%',
+                      AppFormats.percent(report.goalProgress),
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -186,8 +182,8 @@ class _QuantitativeReportView extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${report.todayValue.toStringAsFixed(1)} / $goalValue$unitSuffix'
-                  '${report.goalMetToday ? '  ✓ meta atingida' : ''}',
+                  '${AppFormats.number(report.todayValue)} / ${qty(goalValue)}'
+                  '${report.goalMetToday ? '  ${l10n.reportGoalMet}' : ''}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -208,7 +204,7 @@ class _QuantitativeReportView extends StatelessWidget {
         if (onDayTap != null) ...[
           const SizedBox(height: 8),
           Text(
-            'Toque num dia para registar ou corrigir valores passados.',
+            l10n.reportTapToEditValues,
             style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -216,7 +212,7 @@ class _QuantitativeReportView extends StatelessWidget {
         ],
         const SizedBox(height: 20),
         Text(
-          'Evolução (últimos 30 dias)',
+          l10n.reportEvolution,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -232,11 +228,6 @@ class _QuantitativeReportView extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _shortDate(String key) {
-    final d = HabitDateUtils.parseKey(key);
-    return '${d.day}/${d.month}';
   }
 }
 
@@ -348,11 +339,10 @@ class _EvolutionChart extends StatelessWidget {
                 if (i < 0 || i >= history.length || i % 5 != 0) {
                   return const SizedBox.shrink();
                 }
-                final parts = history[i].date.split('-');
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
-                    '${parts[2]}/${parts[1]}',
+                    AppFormats.dayMonth(HabitDateUtils.parseKey(history[i].date)),
                     style: theme.textTheme.labelSmall,
                   ),
                 );
@@ -372,7 +362,7 @@ class _EvolutionChart extends StatelessWidget {
               dashArray: [6, 4],
               label: HorizontalLineLabel(
                 show: true,
-                labelResolver: (_) => 'Meta',
+                labelResolver: (_) => AppLocalizations.of(context).chartGoal,
                 style: theme.textTheme.labelSmall,
               ),
             ),

@@ -1,3 +1,5 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../l10n/app_localizations.dart';
 import '../database/app_database.dart';
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
@@ -172,22 +175,24 @@ class NotificationService {
       habit.reminderMinute!,
     );
 
-    const androidDetails = AndroidNotificationDetails(
+    // Sem BuildContext: os textos vêm diretamente do ARB da língua da app.
+    final l10n = lookupAppLocalizations(const Locale('pt'));
+    final androidDetails = AndroidNotificationDetails(
       'habit_reminders',
-      'Lembretes de hábitos',
-      channelDescription: 'Notificações diárias para lembrar dos seus hábitos',
+      l10n.notificationChannelName,
+      channelDescription: l10n.notificationChannelDescription,
       importance: Importance.high,
       priority: Priority.high,
     );
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: DarwinNotificationDetails(),
     );
 
     await _plugin.zonedSchedule(
       id: id,
-      title: 'Hora do hábito',
+      title: l10n.notificationTitle,
       body: habit.title,
       scheduledDate: scheduled,
       notificationDetails: details,

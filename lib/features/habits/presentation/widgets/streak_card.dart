@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/utils/streak_calculator.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class StreakCard extends StatelessWidget {
   const StreakCard({super.key, required this.streak});
@@ -11,6 +12,7 @@ class StreakCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Card(
       child: Padding(
@@ -21,9 +23,9 @@ class StreakCard extends StatelessWidget {
               child: _StatTile(
                 icon: Icons.local_fire_department_rounded,
                 iconColor: Colors.orange,
-                label: 'Sequência atual',
+                label: l10n.streakCurrent,
                 value: '${streak.currentStreak}',
-                unit: streak.currentStreak == 1 ? 'dia' : 'dias',
+                unit: l10n.dayUnit(streak.currentStreak),
               ),
             ),
             Container(
@@ -35,9 +37,9 @@ class StreakCard extends StatelessWidget {
               child: _StatTile(
                 icon: Icons.emoji_events_rounded,
                 iconColor: Colors.amber,
-                label: 'Melhor sequência',
+                label: l10n.streakBest,
                 value: '${streak.bestStreak}',
-                unit: streak.bestStreak == 1 ? 'dia' : 'dias',
+                unit: l10n.dayUnit(streak.bestStreak),
               ),
             ),
             Container(
@@ -49,9 +51,9 @@ class StreakCard extends StatelessWidget {
               child: _StatTile(
                 icon: Icons.check_circle_outline_rounded,
                 iconColor: theme.colorScheme.primary,
-                label: 'Total',
+                label: l10n.streakTotal,
                 value: '${streak.totalCompletions}',
-                unit: 'dias',
+                unit: l10n.dayUnit(streak.totalCompletions),
               ),
             ),
           ],

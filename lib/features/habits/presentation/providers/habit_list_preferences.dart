@@ -1,15 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum HabitSortOption {
-  name('Nome'),
-  category('Categoria'),
-  progress('Progresso hoje'),
-  streak('Streak'),
-  newest('Mais recentes');
-
-  const HabitSortOption(this.label);
-  final String label;
-}
+/// O texto mostrado vem do ARB (HabitSortOptionLabel).
+enum HabitSortOption { name, category, progress, streak, newest }
 
 class HabitListPreferences {
   const HabitListPreferences({

@@ -14,6 +14,8 @@ import '../../../habits/presentation/widgets/global_streak_banner.dart';
 import '../../../habits/presentation/widgets/today_summary_card.dart';
 import '../../../../core/storage/user_settings_service.dart';
 import '../../../../core/widgets/error_feedback.dart';
+import '../../../../l10n/app_formats.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -24,12 +26,13 @@ class DashboardPage extends ConsumerWidget {
     final listPrefs = ref.watch(habitListPreferencesProvider);
     final userName = ref.watch(userNameProvider);
     final globalStreak = ref.watch(globalStreakProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/habits/new'),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Novo hábito'),
+        label: Text(l10n.dashboardNewHabit),
       ),
       body: habitsState.when(
         data: (items) {
@@ -45,11 +48,11 @@ class DashboardPage extends ConsumerWidget {
                 SliverAppBar(
                   floating: true,
                   snap: true,
-                  title: const Text('Hábitos'),
+                  title: Text(l10n.dashboardTitle),
                   actions: [
                     IconButton(
                       icon: const Icon(Icons.person_outline_rounded),
-                      tooltip: 'Editar nome',
+                      tooltip: l10n.dashboardEditName,
                       onPressed: () => _editName(context, ref, userName),
                     ),
                   ],
@@ -59,7 +62,7 @@ class DashboardPage extends ConsumerWidget {
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       Text(
-                        _greeting(userName),
+                        _greeting(l10n, userName),
                         style:
                             Theme.of(context).textTheme.headlineMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
@@ -67,7 +70,7 @@ class DashboardPage extends ConsumerWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _subtitle(),
+                        AppFormats.weekdayDayMonth(DateTime.now()),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
@@ -102,7 +105,7 @@ class DashboardPage extends ConsumerWidget {
                         const HabitListControls(),
                         const SizedBox(height: 16),
                         Text(
-                          'Hoje',
+                          l10n.today,
                           style:
                               Theme.of(context).textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w600,
@@ -110,7 +113,7 @@ class DashboardPage extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Sim/não: toque para marcar. Quantitativo: toque para registar. Deslize para excluir.',
+                          l10n.dashboardHint,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -122,7 +125,7 @@ class DashboardPage extends ConsumerWidget {
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 24),
                             child: Text(
-                              'Todos os hábitos de hoje já foram concluídos.',
+                              l10n.dashboardAllDone,
                               textAlign: TextAlign.center,
                               style: Theme.of(context)
                                   .textTheme
@@ -145,7 +148,7 @@ class DashboardPage extends ConsumerWidget {
                                   () => ref
                                       .read(habitListProvider.notifier)
                                       .deleteHabit(item.habit.id),
-                                  message: ErrorMessages.deleteHabit,
+                                  message: l10n.errorDeleteHabit,
                                 ),
                               )),
                       ],
@@ -158,50 +161,24 @@ class DashboardPage extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => ErrorRetryView(
-          message: 'Não foi possível carregar os hábitos.',
+          message: l10n.errorLoadHabits,
           onRetry: () => ref.read(habitListProvider.notifier).load(),
         ),
       ),
     );
   }
 
-  String _greeting(String name) {
+  String _greeting(AppLocalizations l10n, String name) {
     final hour = DateTime.now().hour;
     final period = hour < 12
-        ? 'Bom dia'
+        ? l10n.greetingMorning
         : hour < 18
-            ? 'Boa tarde'
-            : 'Boa noite';
-  final who = name.trim().isEmpty ? '' : ', ${name.trim()}';
-    return '$period$who 👋';
-  }
-
-  String _subtitle() {
-    final now = DateTime.now();
-    const days = [
-      'domingo',
-      'segunda-feira',
-      'terça-feira',
-      'quarta-feira',
-      'quinta-feira',
-      'sexta-feira',
-      'sábado',
-    ];
-    const months = [
-      'janeiro',
-      'fevereiro',
-      'março',
-      'abril',
-      'maio',
-      'junho',
-      'julho',
-      'agosto',
-      'setembro',
-      'outubro',
-      'novembro',
-      'dezembro',
-    ];
-    return '${days[now.weekday % 7]}, ${now.day} de ${months[now.month - 1]}';
+            ? l10n.greetingAfternoon
+            : l10n.greetingEvening;
+    final who = name.trim();
+    return who.isEmpty
+        ? l10n.greetingWithoutName(period)
+        : l10n.greetingWithName(period, who);
   }
 
   Future<void> _editName(
@@ -210,15 +187,16 @@ class DashboardPage extends ConsumerWidget {
     String current,
   ) async {
     final controller = TextEditingController(text: current);
+    final l10n = AppLocalizations.of(context);
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Seu nome'),
+        title: Text(l10n.nameDialogTitle),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Como devemos te chamar?',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: l10n.nameDialogHint,
+            border: const OutlineInputBorder(),
           ),
           textCapitalization: TextCapitalization.words,
           autofocus: true,
@@ -226,11 +204,11 @@ class DashboardPage extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
-            child: const Text('Salvar'),
+            child: Text(l10n.actionSave),
           ),
         ],
       ),
@@ -240,7 +218,7 @@ class DashboardPage extends ConsumerWidget {
       await runWithErrorFeedback(
         context,
         () => ref.read(userNameProvider.notifier).setName(result),
-        message: ErrorMessages.saveName,
+        message: l10n.errorSaveName,
       );
     }
   }
@@ -253,6 +231,8 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
@@ -264,12 +244,12 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Nenhum hábito ainda',
+            l10n.emptyTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
           Text(
-            'Crie seu primeiro hábito e acompanhe seu progresso diário.',
+            l10n.emptyMessage,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -279,7 +259,7 @@ class _EmptyState extends StatelessWidget {
           FilledButton.icon(
             onPressed: onCreate,
             icon: const Icon(Icons.add_rounded),
-            label: const Text('Criar hábito'),
+            label: Text(l10n.formCreate),
           ),
         ],
       ),
@@ -322,21 +302,20 @@ class _DismissibleHabitCard extends StatelessWidget {
         // como dispensado se a eliminação resultar. Se falhar, volta ao lugar
         // (evita "dismissed Dismissible still in tree" no rollback).
         confirmDismiss: (_) async {
+          final l10n = AppLocalizations.of(context);
           final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: const Text('Excluir hábito?'),
-                  content: Text(
-                    'Deseja excluir "${item.habit.title}"? Todo o histórico será apagado.',
-                  ),
+                  title: Text(l10n.deleteHabitTitle),
+                  content: Text(l10n.deleteHabitMessage(item.habit.title)),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Cancelar'),
+                      child: Text(l10n.actionCancel),
                     ),
                     FilledButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Excluir'),
+                      child: Text(l10n.actionDelete),
                     ),
                   ],
                 ),
@@ -355,7 +334,7 @@ class _DismissibleHabitCard extends StatelessWidget {
                           item,
                           yesNo: !item.completedToday,
                         ),
-                    message: ErrorMessages.saveLog,
+                    message: AppLocalizations.of(context).errorSaveLog,
                   )
               : null,
           onQuickLog: () => showHabitLogSheet(
